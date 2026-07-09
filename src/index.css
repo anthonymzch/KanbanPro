@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-base: 244 246 250;
+  --c-surface: 255 255 255;
+  --c-raised: 248 250 253;
+  --c-edge: 226 232 240;
+  --c-ink: 15 23 42;
+  --c-muted: 71 85 105;
+  --c-faint: 148 163 184;
+  color-scheme: light;
+}
+
+.dark {
+  --c-base: 10 14 22; /* #0A0E16 azul noche */
+  --c-surface: 17 23 36;
+  --c-raised: 24 32 48;
+  --c-edge: 39 49 70;
+  --c-ink: 231 237 245;
+  --c-muted: 148 163 184;
+  --c-faint: 100 116 139;
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-base text-ink font-sans antialiased;
+}
+
+/* Gradiente de acento Anthony Code: azul eléctrico → cian → violeta */
+.grad-accent {
+  background-image: linear-gradient(100deg, #2563eb 0%, #22d3ee 55%, #8b5cf6 100%);
+}
+
+.grad-text {
+  background-image: linear-gradient(100deg, #3b82f6 0%, #22d3ee 55%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Eyebrow estilo código */
+.eyebrow {
+  @apply font-mono text-xs tracking-widest text-cyan/80 select-none;
+}
+
+/* Scrollbars sutiles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-edge)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-edge));
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Snap horizontal de columnas en móvil */
+.board-scroll {
+  scroll-snap-type: x mandatory;
+}
+.board-scroll > * {
+  scroll-snap-align: start;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+:root:not(.dark) input[type='date']::-webkit-calendar-picker-indicator {
+  filter: none;
+}
