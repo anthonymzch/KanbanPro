@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addDoc,
   collection,
@@ -26,6 +26,9 @@ export function StoreProvider({ children }) {
   const [prefs, setPrefs] = useState({ theme: 'dark', wipLimit: null })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
+  // Último order asignado por columna: evita duplicados si se crean
+  // varias tareas antes de que llegue el snapshot con la anterior.
+  const lastOrderRef = useRef({})
 
   // Suscripciones en tiempo real. Los writes locales llegan al instante
   // por la compensación de latencia de Firestore (optimistic UI).
@@ -61,7 +64,9 @@ export function StoreProvider({ children }) {
 
     const nextOrder = (column) => {
       const orders = tasks.filter((t) => t.column === column).map((t) => t.order || 0)
-      return orders.length ? Math.max(...orders) + 1000 : 1000
+      const order = Math.max(orders.length ? Math.max(...orders) : 0, lastOrderRef.current[column] || 0) + 1000
+      lastOrderRef.current[column] = order
+      return order
     }
 
     return {

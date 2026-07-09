@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
+  MeasuringStrategy,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -57,6 +59,18 @@ export default function BoardPage() {
   )
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  // La tarjeta activa se excluye de los candidatos (su propio droppable
+  // "gana" a las columnas vacías con closestCorners). Prioridad al puntero
+  // y fallback a esquinas para huecos/bordes.
+  const collisionDetection = useCallback((args) => {
+    const candidates = {
+      ...args,
+      droppableContainers: args.droppableContainers.filter((c) => c.id !== args.active.id),
+    }
+    const withPointer = pointerWithin(candidates)
+    return withPointer.length ? withPointer : closestCorners(candidates)
+  }, [])
 
   const onDragStart = ({ active }) => {
     dragging.current = true
@@ -140,7 +154,8 @@ export default function BoardPage() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
