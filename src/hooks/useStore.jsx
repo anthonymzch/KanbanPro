@@ -107,12 +107,22 @@ export function StoreProvider({ children }) {
         toast('Proyecto eliminado')
       },
 
-      addTask: ({ title, column = 'backlog', description = '', tags = [], priority = 'media', dueDate = null, projectId = null }) => {
+      addTask: ({
+        title,
+        column = 'backlog',
+        description = '',
+        tags = [],
+        subtasks = [],
+        priority = 'media',
+        dueDate = null,
+        projectId = null,
+      }) => {
         addDoc(tasksCol, {
           title,
           description,
           column,
           tags,
+          subtasks,
           priority,
           dueDate,
           projectId,

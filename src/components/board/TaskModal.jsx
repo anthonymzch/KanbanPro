@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Archive, Trash2, X } from 'lucide-react'
+import { Archive, Plus, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Badge from '../ui/Badge'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -25,6 +25,8 @@ export default function TaskModal() {
   const [tags, setTags] = useState(task?.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [tagSuggestOpen, setTagSuggestOpen] = useState(false)
+  const [subtasks, setSubtasks] = useState(task?.subtasks || [])
+  const [subtaskInput, setSubtaskInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const existingTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
@@ -39,12 +41,33 @@ export default function TaskModal() {
     setTagInput('')
   }
 
+  const addSubtask = (raw) => {
+    const t = raw.trim()
+    if (!t) return
+    setSubtasks((prev) => [...prev, { id: crypto.randomUUID(), title: t, done: false }])
+    setSubtaskInput('')
+  }
+  const toggleSubtask = (id) => setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, done: !s.done } : s)))
+  const removeSubtask = (id) => setSubtasks((prev) => prev.filter((s) => s.id !== id))
+
   const submit = (e) => {
     e.preventDefault()
     const t = title.trim()
     if (!t) return
     const finalTags = tagInput.trim() ? [...tags, tagInput.trim().toLowerCase()].filter((v, i, a) => a.indexOf(v) === i) : tags
-    const data = { title: t, description: description.trim(), column, priority, dueDate: dueDate || null, tags: finalTags, projectId: projectId || null }
+    const finalSubtasks = subtaskInput.trim()
+      ? [...subtasks, { id: crypto.randomUUID(), title: subtaskInput.trim(), done: false }]
+      : subtasks
+    const data = {
+      title: t,
+      description: description.trim(),
+      column,
+      priority,
+      dueDate: dueDate || null,
+      tags: finalTags,
+      subtasks: finalSubtasks,
+      projectId: projectId || null,
+    }
     if (isNew) addTask(data)
     else updateTask(task.id, data)
     closeTaskModal()
@@ -158,6 +181,44 @@ export default function TaskModal() {
                 ))}
               </div>
             )}
+          </div>
+          <div>
+            <span className="mb-1 block font-mono text-[11px] text-faint">subtareas</span>
+            <div className="space-y-1 rounded-lg border border-edge bg-raised p-2">
+              {subtasks.map((s) => (
+                <div key={s.id} className="group flex items-center gap-2 rounded-md px-1 py-1">
+                  <input
+                    type="checkbox"
+                    checked={s.done}
+                    onChange={() => toggleSubtask(s.id)}
+                    className="h-3.5 w-3.5 shrink-0 accent-cyan"
+                  />
+                  <span className={`flex-1 text-sm ${s.done ? 'text-faint line-through' : 'text-ink'}`}>{s.title}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeSubtask(s.id)}
+                    className="shrink-0 text-faint opacity-0 transition-opacity hover:text-ink group-hover:opacity-100"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-1.5 px-1">
+                <Plus size={13} className="shrink-0 text-faint" />
+                <input
+                  value={subtaskInput}
+                  onChange={(e) => setSubtaskInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addSubtask(subtaskInput)
+                    }
+                  }}
+                  placeholder="Añadir subtarea y pulsar Enter"
+                  className="min-w-[120px] flex-1 bg-transparent py-1 text-sm text-ink placeholder:text-faint focus:outline-none"
+                />
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2 pt-2">
             {!isNew && (

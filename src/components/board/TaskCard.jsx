@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, ListChecks } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
@@ -11,6 +11,8 @@ export function CardBody({ task, overlay = false }) {
   const due = dueMeta(task.dueDate)
   const prio = PRIORITIES[task.priority] || PRIORITIES.media
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
+  const subtasks = task.subtasks || []
+  const subtasksDone = subtasks.filter((s) => s.done).length
 
   return (
     <div
@@ -55,6 +57,18 @@ export function CardBody({ task, overlay = false }) {
           >
             <CalendarDays size={11} />
             {due.label}
+          </Badge>
+        )}
+        {subtasks.length > 0 && (
+          <Badge
+            className={
+              subtasksDone === subtasks.length
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
+                : 'border-edge bg-raised text-faint'
+            }
+          >
+            <ListChecks size={11} />
+            {subtasksDone}/{subtasks.length}
           </Badge>
         )}
       </div>
