@@ -33,15 +33,17 @@ npm run deploy    # build + firebase deploy (hosting + reglas firestore)
 ### Modelo de datos (Firestore)
 
 - `users/{uid}` — `email, displayName, theme ('dark'|'light'), wipLimit (number|null), createdAt`
-- `users/{uid}/tasks/{id}` — `title, description, column, order (float), tags[], priority (baja|media|alta|urgente), dueDate ('YYYY-MM-DD'|null), createdAt, updatedAt`
-- `users/{uid}/ideas/{id}` — `title, description, category ('nueva-app'|'mejora'), votes, status (nueva|evaluacion|aprobada|descartada), convertedTaskId, createdAt, updatedAt`
+- `users/{uid}/projects/{id}` — `name, color (clave de PROJECT_COLORS), createdAt`
+- `users/{uid}/tasks/{id}` — `title, description, column, order (float), tags[], priority (baja|media|alta|urgente), dueDate ('YYYY-MM-DD'|null), projectId (string|null), createdAt, updatedAt`
+- `users/{uid}/ideas/{id}` — `title, description, category ('nueva-app'|'mejora'), votes, status (nueva|evaluacion|aprobada|descartada), projectId (string|null), convertedTaskId, createdAt, updatedAt`
 
 ### Decisiones clave
 
 - **Orden de tarjetas**: campo `order` fraccionario — mover una tarjeta escribe solo ese documento (`(prev+next)/2`, extremos ±1000).
 - **Drag & drop**: `BoardPage` mantiene una copia local `cols` (mapa columna→ids) que se muta en `onDragOver` para animar entre columnas y se persiste en `onDragEnd`. Se reconstruye desde el snapshot cuando no hay drag activo.
 - **Filtros** (búsqueda/prioridad/etiqueta) se aplican en cliente sobre el snapshot en memoria.
-- Convertir idea → tarea usa un `writeBatch` atómico (crea task en Backlog + marca `convertedTaskId`).
+- Convertir idea → tarea usa un `writeBatch` atómico (crea task en Backlog + marca `convertedTaskId`); hereda el `projectId` de la idea.
+- **Proyectos**: agrupan tarjetas (franja + chip de color en la tarjeta, lista clicable en el sidebar que filtra el tablero, select en filtros/modales, gestión CRUD en `ProjectsModal`). Borrar un proyecto desasigna sus tareas/ideas en batch, no las borra. QuickAdd y el modal de tarea nueva heredan el proyecto del filtro activo.
 
 ## Diseño
 

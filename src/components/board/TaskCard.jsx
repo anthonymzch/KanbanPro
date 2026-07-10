@@ -2,21 +2,35 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CalendarDays } from 'lucide-react'
 import Badge from '../ui/Badge'
-import { PRIORITIES, tagColor } from '../../lib/constants'
+import { useStore } from '../../hooks/useStore'
+import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
 import { dueMeta } from '../../lib/dates'
 
 export function CardBody({ task, overlay = false }) {
+  const { projects } = useStore()
   const due = dueMeta(task.dueDate)
   const prio = PRIORITIES[task.priority] || PRIORITIES.media
+  const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
 
   return (
     <div
-      className={`group cursor-pointer rounded-xl border bg-surface p-3 shadow-card transition-all ${
+      className={`group relative cursor-pointer overflow-hidden rounded-xl border bg-surface p-3 shadow-card transition-all ${
+        project ? 'pl-4' : ''
+      } ${
         overlay
           ? 'rotate-2 border-cyan/50 shadow-glow'
           : 'border-edge hover:border-cyan/40 hover:shadow-glow animate-fade-in'
       }`}
     >
+      {project && (
+        <>
+          <span className={`absolute inset-y-0 left-0 w-1 ${projectColor(project.color).dot}`} />
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${projectColor(project.color).dot}`} />
+            <span className="truncate font-mono text-[10px] tracking-wide text-muted">{project.name}</span>
+          </div>
+        </>
+      )}
       {(task.tags || []).length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
           {task.tags.map((tag) => (

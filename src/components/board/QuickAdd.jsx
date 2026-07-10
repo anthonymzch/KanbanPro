@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useStore } from '../../hooks/useStore'
+import { useUI } from '../../hooks/useUI'
 
 export default function QuickAdd({ column }) {
   const { addTask } = useStore()
+  const { filters } = useUI()
   const [value, setValue] = useState('')
 
   const submit = (e) => {
     e.preventDefault()
     const title = value.trim()
     if (!title) return
-    addTask({ title, column })
+    // Con un proyecto filtrado, la tarea rápida nace en ese proyecto
+    addTask({ title, column, projectId: filters.project || null })
     setValue('')
   }
 

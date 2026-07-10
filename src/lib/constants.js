@@ -35,6 +35,24 @@ export function tagColor(name) {
   return TAG_PALETTE[h % TAG_PALETTE.length]
 }
 
+// Colores elegibles para proyectos (clases completas para el JIT de Tailwind)
+export const PROJECT_COLORS = {
+  blue: { label: 'Azul', dot: 'bg-blue-400' },
+  cyan: { label: 'Cian', dot: 'bg-cyan-400' },
+  violet: { label: 'Violeta', dot: 'bg-violet-400' },
+  emerald: { label: 'Esmeralda', dot: 'bg-emerald-400' },
+  amber: { label: 'Ámbar', dot: 'bg-amber-400' },
+  rose: { label: 'Rosa', dot: 'bg-rose-400' },
+  fuchsia: { label: 'Fucsia', dot: 'bg-fuchsia-400' },
+  orange: { label: 'Naranja', dot: 'bg-orange-400' },
+  lime: { label: 'Lima', dot: 'bg-lime-400' },
+  slate: { label: 'Gris', dot: 'bg-slate-400' },
+}
+
+export const PROJECT_COLOR_ORDER = Object.keys(PROJECT_COLORS)
+
+export const projectColor = (key) => PROJECT_COLORS[key] || PROJECT_COLORS.slate
+
 export const IDEA_CATEGORIES = {
   'nueva-app': { label: 'Nueva app', eyebrow: '<nueva-app />' },
   'mejora': { label: 'Mejora de app', eyebrow: '<mejora />' },

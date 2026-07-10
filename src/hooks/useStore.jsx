@@ -26,6 +26,7 @@ export function StoreProvider({ children }) {
   const [prefs, setPrefs] = useState({ theme: 'dark', wipLimit: null })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
+  const [projects, setProjects] = useState([])
   // Último order asignado por columna: evita duplicados si se crean
   // varias tareas antes de que llegue el snapshot con la anterior.
   const lastOrderRef = useRef({})
@@ -44,6 +45,9 @@ export function StoreProvider({ children }) {
       onSnapshot(collection(db, 'users', uid, 'ideas'), (snap) => {
         setIdeas(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       }),
+      onSnapshot(query(collection(db, 'users', uid, 'projects'), orderBy('createdAt')), (snap) => {
+        setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      }),
     ]
     return () => unsubs.forEach((u) => u())
   }, [uid])
@@ -57,6 +61,7 @@ export function StoreProvider({ children }) {
     const userRef = doc(db, 'users', uid)
     const tasksCol = collection(db, 'users', uid, 'tasks')
     const ideasCol = collection(db, 'users', uid, 'ideas')
+    const projectsCol = collection(db, 'users', uid, 'projects')
     const fail = (err) => {
       console.error(err)
       toast('Error al guardar los cambios', 'error')
@@ -73,6 +78,7 @@ export function StoreProvider({ children }) {
       prefs,
       tasks,
       ideas,
+      projects,
 
       setTheme: (theme) => {
         setPrefs((p) => ({ ...p, theme }))
@@ -83,7 +89,25 @@ export function StoreProvider({ children }) {
         updateDoc(userRef, { wipLimit }).catch(fail)
       },
 
-      addTask: ({ title, column = 'backlog', description = '', tags = [], priority = 'media', dueDate = null }) => {
+      addProject: ({ name, color = 'blue' }) => {
+        addDoc(projectsCol, { name, color, createdAt: serverTimestamp() }).catch(fail)
+        toast('Proyecto creado')
+      },
+      updateProject: (id, patch) => {
+        updateDoc(doc(projectsCol, id), patch).catch(fail)
+        toast('Proyecto actualizado')
+      },
+      // Borra el proyecto y desasigna sus tareas e ideas (quedan sin proyecto)
+      deleteProject: (id) => {
+        const batch = writeBatch(db)
+        batch.delete(doc(projectsCol, id))
+        tasks.filter((t) => t.projectId === id).forEach((t) => batch.update(doc(tasksCol, t.id), { projectId: null }))
+        ideas.filter((i) => i.projectId === id).forEach((i) => batch.update(doc(ideasCol, i.id), { projectId: null }))
+        batch.commit().catch(fail)
+        toast('Proyecto eliminado')
+      },
+
+      addTask: ({ title, column = 'backlog', description = '', tags = [], priority = 'media', dueDate = null, projectId = null }) => {
         addDoc(tasksCol, {
           title,
           description,
@@ -91,6 +115,7 @@ export function StoreProvider({ children }) {
           tags,
           priority,
           dueDate,
+          projectId,
           order: nextOrder(column),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -109,11 +134,12 @@ export function StoreProvider({ children }) {
         updateDoc(doc(tasksCol, id), { column, order, updatedAt: serverTimestamp() }).catch(fail)
       },
 
-      addIdea: ({ title, description = '', category = 'nueva-app' }) => {
+      addIdea: ({ title, description = '', category = 'nueva-app', projectId = null }) => {
         addDoc(ideasCol, {
           title,
           description,
           category,
+          projectId,
           votes: 0,
           status: 'nueva',
           convertedTaskId: null,
@@ -144,6 +170,7 @@ export function StoreProvider({ children }) {
           tags: ['idea'],
           priority: 'media',
           dueDate: null,
+          projectId: idea.projectId || null,
           order: nextOrder('backlog'),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -156,7 +183,7 @@ export function StoreProvider({ children }) {
         toast('Idea enviada al Backlog 🚀')
       },
     }
-  }, [uid, prefs, tasks, ideas, toast])
+  }, [uid, prefs, tasks, ideas, projects, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

@@ -3,10 +3,10 @@ import { CheckCircle2, ChevronUp, Pencil, Send, Trash2 } from 'lucide-react'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
-import { IDEA_CATEGORIES, IDEA_STATUSES, IDEA_STATUS_ORDER } from '../../lib/constants'
+import { IDEA_CATEGORIES, IDEA_STATUSES, IDEA_STATUS_ORDER, projectColor } from '../../lib/constants'
 
 export default function IdeaCard({ idea }) {
-  const { voteIdea, updateIdea, deleteIdea, convertIdea } = useStore()
+  const { voteIdea, updateIdea, deleteIdea, convertIdea, projects } = useStore()
   const { openIdeaModal } = useUI()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [voted, setVoted] = useState(false)
@@ -36,7 +36,18 @@ export default function IdeaCard({ idea }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <span className="eyebrow text-[10px]">{category.eyebrow}</span>
+        <div className="flex flex-wrap items-center gap-x-2">
+          <span className="eyebrow text-[10px]">{category.eyebrow}</span>
+          {(() => {
+            const project = idea.projectId ? projects.find((p) => p.id === idea.projectId) : null
+            return project ? (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] text-muted">
+                <span className={`h-1.5 w-1.5 rounded-full ${projectColor(project.color).dot}`} />
+                {project.name}
+              </span>
+            ) : null
+          })()}
+        </div>
         <h3 className="mt-0.5 font-display text-sm font-semibold leading-snug text-ink">{idea.title}</h3>
         {idea.description && <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted">{idea.description}</p>}
 

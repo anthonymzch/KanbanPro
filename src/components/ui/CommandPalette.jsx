@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, Moon, Plus, Search, SquareKanban, Sun } from 'lucide-react'
+import { Folder, Lightbulb, Moon, Plus, Search, SquareKanban, Sun } from 'lucide-react'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
 
@@ -8,7 +8,7 @@ const norm = (s) => (s || '').toLowerCase()
 
 export default function CommandPalette() {
   const { tasks, ideas, prefs, setTheme } = useStore()
-  const { setPaletteOpen, openTaskModal, openIdeaModal, focusSearch } = useUI()
+  const { setPaletteOpen, openTaskModal, openIdeaModal, focusSearch, openProjects } = useUI()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -23,6 +23,7 @@ export default function CommandPalette() {
       { id: 'a3', section: 'Acciones', label: 'Ir al tablero', icon: SquareKanban, run: () => navigate('/') },
       { id: 'a4', section: 'Acciones', label: 'Ir a ideas', icon: Lightbulb, run: () => navigate('/ideas') },
       { id: 'a5', section: 'Acciones', label: 'Buscar en el tablero', icon: Search, kbd: '/', run: () => focusSearch() },
+      { id: 'a7', section: 'Acciones', label: 'Gestionar proyectos', icon: Folder, run: () => openProjects() },
       {
         id: 'a6',
         section: 'Acciones',
@@ -65,7 +66,7 @@ export default function CommandPalette() {
       : []
 
     return [...actions, ...taskHits, ...ideaHits]
-  }, [query, tasks, ideas, prefs.theme, navigate, openTaskModal, openIdeaModal, focusSearch, setTheme])
+  }, [query, tasks, ideas, prefs.theme, navigate, openTaskModal, openIdeaModal, focusSearch, setTheme, openProjects])
 
   const sel = Math.min(index, Math.max(items.length - 1, 0))
 

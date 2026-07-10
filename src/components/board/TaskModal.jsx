@@ -9,8 +9,8 @@ import { COLUMNS, PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constan
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask } = useStore()
-  const { taskModal, closeTaskModal } = useUI()
+  const { addTask, updateTask, deleteTask, projects } = useStore()
+  const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
   const isNew = !task
 
@@ -19,6 +19,8 @@ export default function TaskModal() {
   const [column, setColumn] = useState(task?.column || taskModal.column || 'backlog')
   const [priority, setPriority] = useState(task?.priority || 'media')
   const [dueDate, setDueDate] = useState(task?.dueDate || '')
+  // Al crear con un proyecto filtrado, la tarea nace en ese proyecto
+  const [projectId, setProjectId] = useState(task?.projectId || (isNew ? filters.project : '') || '')
   const [tags, setTags] = useState(task?.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -34,7 +36,7 @@ export default function TaskModal() {
     const t = title.trim()
     if (!t) return
     const finalTags = tagInput.trim() ? [...tags, tagInput.trim().toLowerCase()].filter((v, i, a) => a.indexOf(v) === i) : tags
-    const data = { title: t, description: description.trim(), column, priority, dueDate: dueDate || null, tags: finalTags }
+    const data = { title: t, description: description.trim(), column, priority, dueDate: dueDate || null, tags: finalTags, projectId: projectId || null }
     if (isNew) addTask(data)
     else updateTask(task.id, data)
     closeTaskModal()
@@ -58,7 +60,28 @@ export default function TaskModal() {
             rows={5}
             className={`${inputCls} resize-y`}
           />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block font-mono text-[11px] text-faint">proyecto</span>
+              <div className="flex items-center gap-1.5">
+                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${selectCls} w-full`}>
+                  <option value="">Sin proyecto</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={openProjects}
+                  title="Gestionar proyectos"
+                  className="shrink-0 rounded-lg border border-dashed border-edge px-2.5 py-2 text-sm text-faint transition-colors hover:border-cyan/40 hover:text-ink"
+                >
+                  +
+                </button>
+              </div>
+            </label>
             <label className="block">
               <span className="mb-1 block font-mono text-[11px] text-faint">columna</span>
               <select value={column} onChange={(e) => setColumn(e.target.value)} className={`${selectCls} w-full`}>

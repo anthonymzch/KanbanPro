@@ -6,7 +6,7 @@ import { IDEA_CATEGORIES, IDEA_STATUSES, IDEA_STATUS_ORDER } from '../../lib/con
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function IdeaFormModal() {
-  const { addIdea, updateIdea } = useStore()
+  const { addIdea, updateIdea, projects } = useStore()
   const { ideaModal, closeIdeaModal } = useUI()
   const idea = ideaModal.idea
   const isNew = !idea
@@ -15,12 +15,13 @@ export default function IdeaFormModal() {
   const [description, setDescription] = useState(idea?.description || '')
   const [category, setCategory] = useState(idea?.category || 'nueva-app')
   const [status, setStatus] = useState(idea?.status || 'nueva')
+  const [projectId, setProjectId] = useState(idea?.projectId || '')
 
   const submit = (e) => {
     e.preventDefault()
     const t = title.trim()
     if (!t) return
-    const data = { title: t, description: description.trim(), category }
+    const data = { title: t, description: description.trim(), category, projectId: projectId || null }
     if (isNew) addIdea(data)
     else updateIdea(idea.id, { ...data, status })
     closeIdeaModal()
@@ -62,6 +63,17 @@ export default function IdeaFormModal() {
             ))}
           </div>
         </div>
+        <label className="block">
+          <span className="mb-1 block font-mono text-[11px] text-faint">proyecto (opcional)</span>
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${selectCls} w-full`}>
+            <option value="">Sin proyecto</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
         {!isNew && (
           <label className="block">
             <span className="mb-1 block font-mono text-[11px] text-faint">estado</span>

@@ -9,7 +9,8 @@ export function UIProvider({ children }) {
   // ideaModal: null | { idea: obj|null }
   const [ideaModal, setIdeaModal] = useState(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [filters, setFilters] = useState({ search: '', priority: '', tag: '' })
+  const [projectsOpen, setProjectsOpen] = useState(false)
+  const [filters, setFilters] = useState({ search: '', priority: '', tag: '', project: '' })
   const searchRef = useRef(null)
   const navigate = useNavigate()
 
@@ -18,10 +19,13 @@ export function UIProvider({ children }) {
       taskModal,
       ideaModal,
       paletteOpen,
+      projectsOpen,
       filters,
       searchRef,
       setFilters,
       setPaletteOpen,
+      openProjects: () => setProjectsOpen(true),
+      closeProjects: () => setProjectsOpen(false),
       openTaskModal: (task = null, column = 'backlog') => setTaskModal({ task, column }),
       closeTaskModal: () => setTaskModal(null),
       openIdeaModal: (idea = null) => setIdeaModal({ idea }),
@@ -31,7 +35,7 @@ export function UIProvider({ children }) {
         setTimeout(() => searchRef.current?.focus(), 60)
       },
     }),
-    [taskModal, ideaModal, paletteOpen, filters, navigate],
+    [taskModal, ideaModal, paletteOpen, projectsOpen, filters, navigate],
   )
 
   // Atajos globales: N tarea, I idea, / buscar, Cmd/Ctrl+K paleta
@@ -45,7 +49,7 @@ export function UIProvider({ children }) {
       const t = e.target
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (taskModal || ideaModal || paletteOpen) return
+      if (taskModal || ideaModal || paletteOpen || projectsOpen) return
       const k = e.key.toLowerCase()
       if (k === 'n') {
         e.preventDefault()
@@ -60,7 +64,7 @@ export function UIProvider({ children }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [taskModal, ideaModal, paletteOpen, value])
+  }, [taskModal, ideaModal, paletteOpen, projectsOpen, value])
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>
 }
