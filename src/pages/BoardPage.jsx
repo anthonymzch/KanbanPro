@@ -37,7 +37,7 @@ export default function BoardPage() {
         (!q || t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q)) &&
         (!filters.priority || t.priority === filters.priority) &&
         (!filters.tag || (t.tags || []).includes(filters.tag)) &&
-        (!filters.project || t.projectId === filters.project),
+        (!filters.projects.length || filters.projects.includes(t.projectId)),
     )
   }, [tasks, filters])
 

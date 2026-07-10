@@ -34,7 +34,10 @@ function ProjectList() {
   const count = (id) => tasks.filter((t) => t.projectId === id && t.column !== 'archived').length
 
   const select = (id) => {
-    setFilters((f) => ({ ...f, project: f.project === id ? '' : id }))
+    setFilters((f) => ({
+      ...f,
+      projects: f.projects.length === 1 && f.projects[0] === id ? [] : [id],
+    }))
     navigate('/')
   }
 
@@ -55,7 +58,7 @@ function ProjectList() {
           key={p.id}
           onClick={() => select(p.id)}
           className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-            filters.project === p.id ? 'bg-raised text-ink shadow-card' : 'text-muted hover:bg-raised/60 hover:text-ink'
+            filters.projects.includes(p.id) ? 'bg-raised text-ink shadow-card' : 'text-muted hover:bg-raised/60 hover:text-ink'
           }`}
         >
           <span className={`h-2 w-2 shrink-0 rounded-full ${projectColor(p.color).dot}`} />

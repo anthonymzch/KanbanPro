@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Archive, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Badge from '../ui/Badge'
@@ -9,7 +9,7 @@ import { COLUMNS, PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constan
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask, projects } = useStore()
+  const { addTask, updateTask, deleteTask, projects, tasks } = useStore()
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
   const isNew = !task
@@ -19,11 +19,19 @@ export default function TaskModal() {
   const [column, setColumn] = useState(task?.column || taskModal.column || 'backlog')
   const [priority, setPriority] = useState(task?.priority || 'media')
   const [dueDate, setDueDate] = useState(task?.dueDate || '')
-  // Al crear con un proyecto filtrado, la tarea nace en ese proyecto
-  const [projectId, setProjectId] = useState(task?.projectId || (isNew ? filters.project : '') || '')
+  // Al crear con un único proyecto filtrado, la tarea nace en ese proyecto
+  const soleFilteredProject = filters.projects.length === 1 ? filters.projects[0] : ''
+  const [projectId, setProjectId] = useState(task?.projectId || (isNew ? soleFilteredProject : '') || '')
   const [tags, setTags] = useState(task?.tags || [])
   const [tagInput, setTagInput] = useState('')
+  const [tagSuggestOpen, setTagSuggestOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const existingTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
+  const tagSuggestions = useMemo(() => {
+    const q = tagInput.trim().toLowerCase()
+    return existingTags.filter((t) => !tags.includes(t) && (!q || t.includes(q)))
+  }, [existingTags, tags, tagInput])
 
   const addTag = (raw) => {
     const t = raw.trim().toLowerCase()
@@ -107,7 +115,7 @@ export default function TaskModal() {
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputCls} />
             </label>
           </div>
-          <div>
+          <div className="relative">
             <span className="mb-1 block font-mono text-[11px] text-faint">etiquetas</span>
             <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-edge bg-raised p-2">
               {tags.map((tag) => (
@@ -121,6 +129,8 @@ export default function TaskModal() {
               <input
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
+                onFocus={() => setTagSuggestOpen(true)}
+                onBlur={() => setTimeout(() => setTagSuggestOpen(false), 120)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault()
@@ -133,6 +143,21 @@ export default function TaskModal() {
                 className="min-w-[120px] flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none"
               />
             </div>
+            {tagSuggestOpen && tagSuggestions.length > 0 && (
+              <div className="absolute left-0 top-[calc(100%+4px)] z-10 max-h-40 w-full overflow-y-auto rounded-lg border border-edge bg-surface p-1 shadow-card">
+                {tagSuggestions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addTag(t)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-ink transition-colors hover:bg-raised"
+                  >
+                    <Badge className={tagColor(t)}>{t}</Badge>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 pt-2">
             {!isNew && (

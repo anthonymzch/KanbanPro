@@ -12,14 +12,15 @@ export default function QuickAdd({ column }) {
     e.preventDefault()
     const title = value.trim()
     if (!title) return
-    // Con un proyecto filtrado, la tarea rápida nace en ese proyecto
-    addTask({ title, column, projectId: filters.project || null })
+    // Con un único proyecto filtrado, la tarea rápida nace en ese proyecto
+    const soleProject = filters.projects.length === 1 ? filters.projects[0] : null
+    addTask({ title, column, projectId: soleProject })
     setValue('')
   }
 
   return (
     <form onSubmit={submit} className="relative p-2 pt-1">
-      <Plus size={13} className="pointer-events-none absolute left-[18px] top-1/2 -translate-y-[3px] text-faint" />
+      <Plus size={13} className="pointer-events-none absolute left-[18px] top-1/2 -translate-y-1/2 text-faint" />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}

@@ -10,7 +10,7 @@ export function UIProvider({ children }) {
   const [ideaModal, setIdeaModal] = useState(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
-  const [filters, setFilters] = useState({ search: '', priority: '', tag: '', project: '' })
+  const [filters, setFilters] = useState({ search: '', priority: '', tag: '', projects: [] })
   const searchRef = useRef(null)
   const navigate = useNavigate()
 

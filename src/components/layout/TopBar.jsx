@@ -14,7 +14,7 @@ export default function TopBar() {
   const dark = prefs.theme !== 'light'
 
   return (
-    <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-edge bg-surface/70 px-4 py-3 backdrop-blur md:px-6">
+    <header className="relative z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-edge bg-surface/70 px-4 py-3 backdrop-blur md:px-6">
       <div className="md:hidden">
         <span className="grad-text font-display text-base font-bold">KanbanPro</span>
       </div>

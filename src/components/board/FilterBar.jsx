@@ -4,13 +4,14 @@ import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
 import { PRIORITIES, PRIORITY_ORDER } from '../../lib/constants'
 import { selectCls } from '../../lib/ui'
+import ProjectMultiSelect from './ProjectMultiSelect'
 
 export default function FilterBar() {
   const { tasks, projects } = useStore()
   const { filters, setFilters, searchRef } = useUI()
 
   const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
-  const hasFilters = filters.search || filters.priority || filters.tag || filters.project
+  const hasFilters = filters.search || filters.priority || filters.tag || filters.projects.length > 0
 
   return (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -24,18 +25,11 @@ export default function FilterBar() {
           className="w-full rounded-lg border border-edge bg-raised py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-faint focus:border-cyan/40 focus:outline-none focus:ring-1 focus:ring-cyan/40"
         />
       </div>
-      <select
-        value={filters.project}
-        onChange={(e) => setFilters((f) => ({ ...f, project: e.target.value }))}
-        className={`${selectCls} py-1.5`}
-      >
-        <option value="">Proyecto</option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      <ProjectMultiSelect
+        projects={projects}
+        value={filters.projects}
+        onChange={(projects) => setFilters((f) => ({ ...f, projects }))}
+      />
       <select
         value={filters.priority}
         onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}
@@ -62,7 +56,7 @@ export default function FilterBar() {
       </select>
       {hasFilters && (
         <button
-          onClick={() => setFilters({ search: '', priority: '', tag: '', project: '' })}
+          onClick={() => setFilters({ search: '', priority: '', tag: '', projects: [] })}
           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-faint transition-colors hover:text-ink"
         >
           <X size={12} /> Limpiar
