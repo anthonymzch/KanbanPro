@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import { enterDemo } from '../lib/demo'
 import { btnPrimary, inputCls } from '../lib/ui'
 
 const ERRORS = {
@@ -48,6 +49,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [searchParams] = useSearchParams()
+
+  // /login?demo entra directo a la demo (link compartible desde el portafolio)
+  const autoDemo = searchParams.get('demo') != null
+  useEffect(() => {
+    if (autoDemo && !user && !loading) {
+      setBusy(true)
+      enterDemo()
+        .catch(() => setError('No se pudo cargar la demo, inténtalo de nuevo'))
+        .finally(() => setBusy(false))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDemo, loading])
 
   if (!loading && user) return <Navigate to="/" replace />
 
@@ -105,6 +119,14 @@ export default function LoginPage() {
             >
               <GoogleIcon />
               Continuar con Google
+            </button>
+            <button
+              onClick={() => run(enterDemo)}
+              disabled={busy}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-edge px-4 py-2.5 text-sm text-muted transition-all hover:border-violet/50 hover:text-ink hover:shadow-glow-violet disabled:opacity-50"
+            >
+              <Sparkles size={14} className="text-violet" />
+              Explorar la demo — sin registro
             </button>
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-edge" />
