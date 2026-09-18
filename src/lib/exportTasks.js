@@ -1,4 +1,4 @@
-import { PRIORITIES } from './constants'
+import { DEFAULT_EXPORT_PROMPT, PRIORITIES } from './constants'
 
 const SEPARATOR = `\n\n${'─'.repeat(40)}\n\n`
 
@@ -22,13 +22,13 @@ function taskBlock(task, index, total, project) {
   return lines.join('\n')
 }
 
-export function buildColumnExport(column, tasks, projects = []) {
+export function buildColumnExport(column, tasks, projects = [], instructions = DEFAULT_EXPORT_PROMPT) {
   const stamp = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
   const header = [
     `Tablero KanbanPro — columna "${column.label}" (${tasks.length} tarea${tasks.length === 1 ? '' : 's'})`,
     `Exportado: ${stamp}`,
     '',
-    'Instrucciones: trabaja estas tareas una por una, en el orden en que aparecen. Al terminar cada una, avísame antes de pasar a la siguiente.',
+    `Instrucciones: ${(instructions || DEFAULT_EXPORT_PROMPT).trim()}`,
   ].join('\n')
 
   if (!tasks.length) return `${header}\n\n(La columna está vacía.)\n`

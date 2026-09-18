@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { AlertTriangle, Check, Clipboard, Inbox, Settings2 } from 'lucide-react'
+import { AlertTriangle, Check, Clipboard, Inbox, MessageSquareText, Settings2 } from 'lucide-react'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
 import { useStore } from '../../hooks/useStore'
 import { buildColumnExport } from '../../lib/exportTasks'
+import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS } from '../../lib/constants'
 
 const DOTS = {
   backlog: 'bg-slate-400',
@@ -51,19 +52,64 @@ function WipEditor({ wipLimit, onSave, onClose }) {
   )
 }
 
+function PromptEditor({ value, onSave, onClose }) {
+  const [text, setText] = useState(value)
+  return (
+    <div className="absolute right-0 top-9 z-20 w-72 rounded-lg border border-edge bg-surface p-3 shadow-card">
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-faint">Instrucciones para Claude</p>
+      <div className="mb-2 flex flex-wrap gap-1">
+        {EXPORT_PROMPT_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => setText(preset.text)}
+            className="rounded-md border border-edge bg-raised px-2 py-1 text-[11px] text-muted transition-colors hover:border-cyan/40 hover:text-ink"
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        autoFocus
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        className="w-full resize-none rounded-md border border-edge bg-raised p-2 text-xs leading-relaxed text-ink focus:outline-none focus:border-cyan/40"
+      />
+      <div className="mt-2 flex justify-end gap-1.5">
+        <button type="button" onClick={onClose} className="rounded-md px-2 py-1 text-[11px] text-faint hover:text-ink">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onSave(text.trim() || null)
+            onClose()
+          }}
+          className="rounded-md bg-cyan/20 px-2 py-1 text-[11px] font-medium text-cyan transition-colors hover:bg-cyan/30"
+        >
+          Guardar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit, projects } = useStore()
+  const { prefs, setWipLimit, setExportPrompt, projects } = useStore()
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const [editingWip, setEditingWip] = useState(false)
+  const [editingPrompt, setEditingPrompt] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const isWipCol = column.id === 'inprogress'
   const wipLimit = prefs.wipLimit
   const overWip = isWipCol && wipLimit && tasks.length > wipLimit
+  const exportPrompt = prefs.exportPrompt || DEFAULT_EXPORT_PROMPT
 
   const handleCopyColumn = async () => {
     try {
-      await navigator.clipboard.writeText(buildColumnExport(column, tasks, projects))
+      await navigator.clipboard.writeText(buildColumnExport(column, tasks, projects, exportPrompt))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -73,7 +119,7 @@ export default function Column({ column, tasks, onCardClick }) {
 
   return (
     <section
-      className={`flex h-full w-[280px] shrink-0 flex-col rounded-xl border bg-surface/50 transition-shadow ${
+      className={`relative flex h-full w-[280px] shrink-0 flex-col rounded-xl border bg-surface/50 transition-shadow ${
         overWip ? 'border-red-500/40 ring-1 ring-red-500/30' : isOver ? 'border-cyan/40' : 'border-edge'
       }`}
     >
@@ -107,6 +153,13 @@ export default function Column({ column, tasks, onCardClick }) {
               </button>
             ))}
           <button
+            onClick={() => setEditingPrompt(true)}
+            title="Cambiar las instrucciones que se copian con las tareas"
+            className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100"
+          >
+            <MessageSquareText size={13} />
+          </button>
+          <button
             onClick={handleCopyColumn}
             disabled={tasks.length === 0}
             title="Copiar las tareas de esta columna para pegarlas en Claude"
@@ -115,6 +168,12 @@ export default function Column({ column, tasks, onCardClick }) {
             {copied ? <Check size={13} className="text-emerald-400" /> : <Clipboard size={13} />}
           </button>
         </span>
+        {editingPrompt && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setEditingPrompt(false)} />
+            <PromptEditor value={exportPrompt} onSave={setExportPrompt} onClose={() => setEditingPrompt(false)} />
+          </>
+        )}
       </header>
       {overWip && (
         <p className="mx-3 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-400">

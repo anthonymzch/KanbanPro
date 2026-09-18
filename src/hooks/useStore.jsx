@@ -23,7 +23,7 @@ export function StoreProvider({ children }) {
   const toast = useToast()
   const uid = user.uid
 
-  const [prefs, setPrefs] = useState({ theme: 'dark', wipLimit: null })
+  const [prefs, setPrefs] = useState({ theme: 'dark', wipLimit: null, exportPrompt: null })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
   const [projects, setProjects] = useState([])
@@ -37,7 +37,7 @@ export function StoreProvider({ children }) {
     const unsubs = [
       onSnapshot(doc(db, 'users', uid), (snap) => {
         const d = snap.data()
-        if (d) setPrefs({ theme: d.theme || 'dark', wipLimit: d.wipLimit ?? null })
+        if (d) setPrefs({ theme: d.theme || 'dark', wipLimit: d.wipLimit ?? null, exportPrompt: d.exportPrompt ?? null })
       }),
       onSnapshot(query(collection(db, 'users', uid, 'tasks'), orderBy('order')), (snap) => {
         setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
@@ -87,6 +87,10 @@ export function StoreProvider({ children }) {
       setWipLimit: (wipLimit) => {
         setPrefs((p) => ({ ...p, wipLimit }))
         updateDoc(userRef, { wipLimit }).catch(fail)
+      },
+      setExportPrompt: (exportPrompt) => {
+        setPrefs((p) => ({ ...p, exportPrompt }))
+        updateDoc(userRef, { exportPrompt }).catch(fail)
       },
 
       addProject: ({ name, color = 'blue' }) => {

@@ -68,3 +68,18 @@ export const IDEA_STATUSES = {
 export const IDEA_STATUS_ORDER = ['nueva', 'evaluacion', 'aprobada', 'descartada']
 
 export const DEFAULT_WIP_LIMIT = 5
+
+export const EXPORT_PROMPT_PRESETS = [
+  {
+    id: 'stepwise',
+    label: 'Paso a paso',
+    text: 'Trabaja estas tareas una por una, en el orden en que aparecen. Al terminar cada una, avísame antes de pasar a la siguiente.',
+  },
+  {
+    id: 'summary',
+    label: 'Resumen final',
+    text: 'Trabaja estas tareas una por una, en el orden en que aparecen. Una vez acabes todas dime qué has hecho y qué debo probar yo para comprobar que todo funciona correctamente.',
+  },
+]
+
+export const DEFAULT_EXPORT_PROMPT = EXPORT_PROMPT_PRESETS[0].text
