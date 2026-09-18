@@ -4,18 +4,22 @@ import {
   DragOverlay,
   MeasuringStrategy,
   PointerSensor,
+  closestCenter,
   closestCorners,
   pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import confetti from 'canvas-confetti'
 import Column from '../components/board/Column'
 import { CardBody } from '../components/board/TaskCard'
 import { useStore } from '../hooks/useStore'
 import { useToast } from '../hooks/useToast'
 import { useUI } from '../hooks/useUI'
+
+// Las columnas son ordenables con id "col:<id>" para no chocar con el droppable de tareas
+const isColumnId = (id) => typeof id === 'string' && id.startsWith('col:')
 
 function buildColumns(tasks, columnIds) {
   const map = Object.fromEntries(columnIds.map((c) => [c, []]))
@@ -24,7 +28,7 @@ function buildColumns(tasks, columnIds) {
 }
 
 export default function BoardPage() {
-  const { tasks, moveTask, columns, prefs } = useStore()
+  const { tasks, moveTask, columns, prefs, setColumnOrder } = useStore()
   const { filters, openTaskModal } = useUI()
   const toast = useToast()
 
@@ -70,9 +74,16 @@ export default function BoardPage() {
   // "gana" a las columnas vacías con closestCorners). Prioridad al puntero
   // y fallback a esquinas para huecos/bordes.
   const collisionDetection = useCallback((args) => {
+    // Arrastrar una columna: solo compite contra las demás columnas
+    if (isColumnId(args.active.id)) {
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter((c) => isColumnId(c.id)),
+      })
+    }
     const candidates = {
       ...args,
-      droppableContainers: args.droppableContainers.filter((c) => c.id !== args.active.id),
+      droppableContainers: args.droppableContainers.filter((c) => c.id !== args.active.id && !isColumnId(c.id)),
     }
     const withPointer = pointerWithin(candidates)
     return withPointer.length ? withPointer : closestCorners(candidates)
@@ -109,6 +120,17 @@ export default function BoardPage() {
   const onDragEnd = ({ active, over }) => {
     dragging.current = false
     setActiveId(null)
+
+    if (isColumnId(active.id)) {
+      if (!over || active.id === over.id) return
+      const shown = visibleColumns.map((c) => c.id)
+      const moved = arrayMove(shown, shown.indexOf(active.id.slice(4)), shown.indexOf(over.id.slice(4)))
+      // Las columnas ocultas conservan su hueco; solo se reordenan las visibles entre sí
+      let k = 0
+      setColumnOrder(columnIds.map((id) => (shown.includes(id) ? moved[k++] : id)))
+      return
+    }
+
     const col = findCol(active.id)
     if (!over || !col) {
       rebuild()
@@ -212,14 +234,16 @@ export default function BoardPage() {
           panning ? 'cursor-grabbing select-none' : 'cursor-grab'
         }`}
       >
-        {visibleColumns.map((column) => (
-          <Column
-            key={column.id}
-            column={column}
-            tasks={(cols[column.id] || []).map((id) => byId[id]).filter(Boolean)}
-            onCardClick={openTaskModal}
-          />
-        ))}
+        <SortableContext items={visibleColumns.map((c) => `col:${c.id}`)} strategy={horizontalListSortingStrategy}>
+          {visibleColumns.map((column) => (
+            <Column
+              key={column.id}
+              column={column}
+              tasks={(cols[column.id] || []).map((id) => byId[id]).filter(Boolean)}
+              onCardClick={openTaskModal}
+            />
+          ))}
+        </SortableContext>
       </div>
       <DragOverlay>{activeTask ? <CardBody task={activeTask} overlay /> : null}</DragOverlay>
     </DndContext>

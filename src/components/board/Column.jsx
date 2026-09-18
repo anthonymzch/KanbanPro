@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
   AlertTriangle,
   ArrowRightLeft,
   Check,
   Clipboard,
   Eye,
+  GripVertical,
   History,
   Inbox,
   MessageSquareText,
   Send,
-  Settings2,
   Wrench,
 } from 'lucide-react'
 import TaskCard from './TaskCard'
@@ -39,33 +40,6 @@ const EMPTY_HINTS = {
   review: 'Nada en revisión todavía',
   done: 'Aún no hay victorias hoy',
   archived: 'El archivo está vacío',
-}
-
-function WipEditor({ wipLimit, onSave, onClose }) {
-  const [val, setVal] = useState(wipLimit ?? '')
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        const n = parseInt(val, 10)
-        onSave(Number.isFinite(n) && n > 0 ? n : null)
-        onClose()
-      }}
-      className="flex items-center gap-1"
-    >
-      <input
-        autoFocus
-        type="number"
-        min="1"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={onClose}
-        placeholder="∞"
-        title="Límite WIP (vacío = sin límite)"
-        className="w-12 rounded border border-edge bg-raised px-1 py-0.5 text-center text-xs text-ink focus:outline-none"
-      />
-    </form>
-  )
 }
 
 function PromptEditor({ value, onSave, onClose }) {
@@ -174,11 +148,18 @@ function MoveAllMenu({ columns, count, onPick, onClose }) {
 }
 
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit, setHiddenColumns, setExportPrompt, projects, sendToReview, columns, moveTasksToColumn } =
-    useStore()
+  const { prefs, setHiddenColumns, setExportPrompt, projects, sendToReview, columns, moveTasksToColumn } = useStore()
   const [movingAll, setMovingAll] = useState(false)
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
-  const [editingWip, setEditingWip] = useState(false)
+  // La columna entera es ordenable; el id lleva prefijo para no chocar con el droppable de tareas
+  const {
+    attributes: sortAttributes,
+    listeners: sortListeners,
+    setNodeRef: setSortRef,
+    transform: sortTransform,
+    transition: sortTransition,
+    isDragging: isColumnDragging,
+  } = useSortable({ id: `col:${column.id}` })
   const [editingPrompt, setEditingPrompt] = useState(false)
   const [sendingReview, setSendingReview] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -222,9 +203,11 @@ export default function Column({ column, tasks, onCardClick }) {
 
   return (
     <section
+      ref={setSortRef}
+      style={{ transform: CSS.Transform.toString(sortTransform), transition: sortTransition }}
       className={`relative flex h-full w-[280px] shrink-0 flex-col rounded-xl border bg-surface/50 transition-shadow ${
         overWip ? 'border-red-500/40 ring-1 ring-red-500/30' : isOver ? 'border-cyan/40' : 'border-edge'
-      }`}
+      } ${isColumnDragging ? 'z-30 opacity-70 shadow-glow' : ''}`}
     >
       <header className="flex items-center gap-2 px-3 pb-1 pt-3">
         <span
@@ -256,18 +239,15 @@ export default function Column({ column, tasks, onCardClick }) {
               <History size={13} />
             </button>
           )}
-          {isWipCol &&
-            (editingWip ? (
-              <WipEditor wipLimit={wipLimit} onSave={setWipLimit} onClose={() => setEditingWip(false)} />
-            ) : (
-              <button
-                onClick={() => setEditingWip(true)}
-                title="Configurar límite WIP"
-                className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100"
-              >
-                <Settings2 size={13} />
-              </button>
-            ))}
+          <button
+            type="button"
+            title="Arrastra para mover la columna a otra posición"
+            className="cursor-grab touch-none rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 active:cursor-grabbing"
+            {...sortAttributes}
+            {...sortListeners}
+          >
+            <GripVertical size={13} />
+          </button>
           {isWipCol && (
             <button
               onClick={() => setSendingReview(true)}
