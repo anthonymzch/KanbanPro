@@ -1,18 +1,40 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, ListChecks } from 'lucide-react'
+import { CalendarDays, Check, Copy, ListChecks } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
 import { dueMeta } from '../../lib/dates'
 
+function taskToText(task) {
+  const parts = [task.title]
+  if (task.description?.trim()) parts.push(task.description.trim())
+  if ((task.subtasks || []).length) {
+    parts.push(task.subtasks.map((s) => `- [${s.done ? 'x' : ' '}] ${s.title}`).join('\n'))
+  }
+  return parts.join('\n\n')
+}
+
 export function CardBody({ task, overlay = false }) {
   const { projects } = useStore()
+  const [copied, setCopied] = useState(false)
   const due = dueMeta(task.dueDate)
   const prio = PRIORITIES[task.priority] || PRIORITIES.media
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
   const subtasks = task.subtasks || []
   const subtasksDone = subtasks.filter((s) => s.done).length
+
+  const handleCopy = async (e) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(taskToText(task))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard no disponible
+    }
+  }
 
   return (
     <div
@@ -70,6 +92,17 @@ export function CardBody({ task, overlay = false }) {
             <ListChecks size={11} />
             {subtasksDone}/{subtasks.length}
           </Badge>
+        )}
+        {!overlay && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            onPointerDown={(e) => e.stopPropagation()}
+            title="Copiar contenido de la tarjeta"
+            className="ml-auto rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-cyan"
+          >
+            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+          </button>
         )}
       </div>
     </div>
