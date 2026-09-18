@@ -3,6 +3,7 @@ import { Archive, Plus, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Badge from '../ui/Badge'
 import ConfirmDialog from '../ui/ConfirmDialog'
+import { ReviewControls } from './TaskCard'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
 import { PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constants'
@@ -93,6 +94,12 @@ export default function TaskModal() {
             rows={5}
             className={`${inputCls} resize-y`}
           />
+          {!isNew && task?.reviewNote && (
+            <div>
+              <span className="mb-1 block font-mono text-[11px] text-faint">revisión</span>
+              <ReviewControls task={task} defaultNoteOpen />
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block font-mono text-[11px] text-faint">proyecto</span>

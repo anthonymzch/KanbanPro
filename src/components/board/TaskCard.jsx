@@ -16,11 +16,11 @@ function taskToText(task) {
   return parts.join('\n\n')
 }
 
-// Checks de revisión (correcto / a corregir) para tarjetas en la columna "Revisión"
-function ReviewControls({ task }) {
+// Checks de revisión (correcto / a corregir) para tareas que pasaron por "Revisión"
+export function ReviewControls({ task, defaultNoteOpen = false }) {
   const { updateTask } = useStore()
   const [correction, setCorrection] = useState(task.correctionNote || '')
-  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(defaultNoteOpen)
 
   const setStatus = (status) => () => {
     updateTask(task.id, { reviewStatus: status, ...(status === 'ok' ? { correctionNote: null } : {}) }, { silent: true })

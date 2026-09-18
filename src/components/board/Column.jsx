@@ -9,6 +9,7 @@ import { useStore } from '../../hooks/useStore'
 import { buildColumnExport, buildCorrectionsExport } from '../../lib/exportTasks'
 import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS, projectColor } from '../../lib/constants'
 import { isWithinDays } from '../../lib/dates'
+import { splitReviewNotes } from '../../lib/reviewNotes'
 
 const DOTS = {
   backlog: 'bg-slate-400',
@@ -102,7 +103,11 @@ function SendToReviewEditor({ onSave, onClose }) {
   const [note, setNote] = useState('')
   return (
     <div className="absolute right-0 top-9 z-20 w-72 rounded-lg border border-edge bg-surface p-3 shadow-card">
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-faint">Pega el "qué hice" de Claude</p>
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-faint">Pega el "qué hice" de Claude</p>
+      <p className="mb-2 text-[11px] leading-relaxed text-faint">
+        Si viene con un bloque "### Tarea: título" por cada tarea, cada nota va a su tarjeta. Si no, se copia entera a
+        todas.
+      </p>
       <textarea
         autoFocus
         rows={5}
@@ -267,7 +272,10 @@ export default function Column({ column, tasks, onCardClick }) {
           <>
             <div className="fixed inset-0 z-10" onClick={() => setSendingReview(false)} />
             <SendToReviewEditor
-              onSave={(note) => sendToReview(tasks.map((t) => t.id), note)}
+              onSave={(note) => {
+                const perTask = splitReviewNotes(note, tasks)
+                sendToReview(tasks.map((t) => ({ id: t.id, note: perTask?.[t.id] || note })))
+              }}
               onClose={() => setSendingReview(false)}
             />
           </>

@@ -70,6 +70,10 @@ export const IDEA_STATUS_ORDER = ['nueva', 'evaluacion', 'aprobada', 'descartada
 
 export const DEFAULT_WIP_LIMIT = 5
 
+// Encabezado que se le pide a Claude para poder repartir su resumen final
+// entre las tarjetas correspondientes al pegarlo en "Enviar a revisión".
+export const REVIEW_NOTE_HEADING = '### Tarea:'
+
 export const EXPORT_PROMPT_PRESETS = [
   {
     id: 'stepwise',
@@ -79,7 +83,7 @@ export const EXPORT_PROMPT_PRESETS = [
   {
     id: 'summary',
     label: 'Resumen final',
-    text: 'Trabaja estas tareas una por una, en el orden en que aparecen. Una vez acabes todas dime qué has hecho y qué debo probar yo para comprobar que todo funciona correctamente.',
+    text: `Trabaja estas tareas una por una, en el orden en que aparecen. Una vez acabes todas, respóndeme con un bloque por cada tarea que empiece con una línea "${REVIEW_NOTE_HEADING} <título exacto de la tarea>" seguida de qué hiciste y qué debo probar yo para comprobar que funciona — así puedo pegar tu respuesta completa y que cada nota caiga en su tarjeta correspondiente.`,
   },
 ]
 
