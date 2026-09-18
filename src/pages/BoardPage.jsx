@@ -157,6 +157,41 @@ export default function BoardPage() {
 
   const activeTask = activeId ? byId[activeId] : null
 
+  // Arrastrar el fondo del tablero para desplazarse (solo ratón; en táctil ya hay scroll nativo)
+  const boardRef = useRef(null)
+  const pan = useRef(null)
+  const [panning, setPanning] = useState(false)
+
+  const onPanStart = (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    if (e.target.closest('[role="button"], button, input, textarea, select, a, label')) return
+    // Las capas invisibles que cierran los popovers deben recibir su propio clic
+    if (getComputedStyle(e.target).position === 'fixed') return
+    const list = e.target.closest('[data-col-scroll]')
+    pan.current = {
+      x: e.clientX,
+      y: e.clientY,
+      left: boardRef.current.scrollLeft,
+      top: list ? list.scrollTop : 0,
+      list,
+    }
+    boardRef.current.setPointerCapture(e.pointerId)
+    setPanning(true)
+  }
+  const onPanMove = (e) => {
+    const p = pan.current
+    if (!p) return
+    boardRef.current.scrollLeft = p.left - (e.clientX - p.x)
+    if (p.list) p.list.scrollTop = p.top - (e.clientY - p.y)
+    window.getSelection()?.removeAllRanges()
+  }
+  const onPanEnd = (e) => {
+    if (!pan.current) return
+    pan.current = null
+    setPanning(false)
+    boardRef.current?.releasePointerCapture?.(e.pointerId)
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -167,7 +202,16 @@ export default function BoardPage() {
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      <div className="board-scroll flex h-full gap-4 overflow-x-auto overflow-y-hidden p-4 md:p-6">
+      <div
+        ref={boardRef}
+        onPointerDown={onPanStart}
+        onPointerMove={onPanMove}
+        onPointerUp={onPanEnd}
+        onPointerCancel={onPanEnd}
+        className={`board-scroll flex h-full gap-4 overflow-x-auto overflow-y-hidden p-4 md:p-6 ${
+          panning ? 'cursor-grabbing select-none' : 'cursor-grab'
+        }`}
+      >
         {visibleColumns.map((column) => (
           <Column
             key={column.id}

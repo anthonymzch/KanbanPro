@@ -33,6 +33,7 @@ export function StoreProvider({ children }) {
     exportPrompt: null,
     hiddenColumns: [],
     hiddenFilters: [],
+    columnOrder: [],
   })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
@@ -55,6 +56,7 @@ export function StoreProvider({ children }) {
             exportPrompt: d.exportPrompt ?? null,
             hiddenColumns: d.hiddenColumns ?? [],
             hiddenFilters: d.hiddenFilters ?? [],
+            columnOrder: d.columnOrder ?? [],
           })
       }),
       onSnapshot(query(collection(db, 'users', uid, 'tasks'), orderBy('order')), (snap) => {
@@ -96,13 +98,42 @@ export function StoreProvider({ children }) {
       return order
     }
 
+    // Columnas del sistema + personalizadas, en el orden que guardó el usuario
+    // (las que no estén en el orden guardado van al final).
+    const baseColumns = [
+      ...COLUMNS,
+      ...customColumns.map((c) => ({ id: c.id, label: c.label, color: c.color, custom: true })),
+    ]
+    const order = prefs.columnOrder || []
+    const columns = [
+      ...order.map((id) => baseColumns.find((c) => c.id === id)).filter(Boolean),
+      ...baseColumns.filter((c) => !order.includes(c.id)),
+    ]
+
     return {
       prefs,
       tasks,
       ideas,
       projects,
       customColumns,
-      columns: [...COLUMNS, ...customColumns.map((c) => ({ id: c.id, label: c.label, color: c.color, custom: true }))],
+      columns,
+      setColumnOrder: (columnOrder) => {
+        setPrefs((p) => ({ ...p, columnOrder }))
+        updateDoc(userRef, { columnOrder }).catch(fail)
+      },
+      // Migra las tareas indicadas a otra columna, al final y conservando su orden relativo
+      moveTasksToColumn: (ids, column) => {
+        const batch = writeBatch(db)
+        const idSet = new Set(ids)
+        tasks
+          .filter((t) => idSet.has(t.id))
+          .forEach((t) => {
+            batch.update(doc(tasksCol, t.id), { column, order: nextOrder(column), updatedAt: serverTimestamp() })
+          })
+        batch.commit().catch(fail)
+        const label = baseColumns.find((c) => c.id === column)?.label || column
+        toast(`${ids.length} ${ids.length === 1 ? 'tarea movida' : 'tareas movidas'} a ${label}`)
+      },
 
       setTheme: (theme) => {
         setPrefs((p) => ({ ...p, theme }))

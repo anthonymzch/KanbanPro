@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import {
   AlertTriangle,
+  ArrowRightLeft,
   Check,
   Clipboard,
   Eye,
@@ -147,8 +148,35 @@ function SendToReviewEditor({ onSave, onClose }) {
   )
 }
 
+function MoveAllMenu({ columns, count, onPick, onClose }) {
+  return (
+    <div className="absolute right-0 top-9 z-20 w-56 rounded-lg border border-edge bg-surface p-2 shadow-card">
+      <p className="mb-1.5 px-1 font-mono text-[10px] uppercase tracking-wide text-faint">
+        Mover {count} {count === 1 ? 'tarea' : 'tareas'} a…
+      </p>
+      <div className="max-h-56 overflow-y-auto">
+        {columns.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => {
+              onPick(c.id)
+              onClose()
+            }}
+            className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm text-ink transition-colors hover:bg-raised"
+          >
+            <span className="truncate">{c.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit, setHiddenColumns, setExportPrompt, projects, sendToReview } = useStore()
+  const { prefs, setWipLimit, setHiddenColumns, setExportPrompt, projects, sendToReview, columns, moveTasksToColumn } =
+    useStore()
+  const [movingAll, setMovingAll] = useState(false)
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const [editingWip, setEditingWip] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState(false)
@@ -276,6 +304,14 @@ export default function Column({ column, tasks, onCardClick }) {
             {copied ? <Check size={13} className="text-emerald-400" /> : <Clipboard size={13} />}
           </button>
           <button
+            onClick={() => setMovingAll(true)}
+            disabled={tasks.length === 0}
+            title="Mover todas las tareas de esta columna a otra"
+            className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:text-faint"
+          >
+            <ArrowRightLeft size={13} />
+          </button>
+          <button
             onClick={hideThisColumn}
             title="Ocultar esta columna"
             className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100"
@@ -287,6 +323,17 @@ export default function Column({ column, tasks, onCardClick }) {
           <>
             <div className="fixed inset-0 z-10" onClick={() => setEditingPrompt(false)} />
             <PromptEditor value={exportPrompt} onSave={setExportPrompt} onClose={() => setEditingPrompt(false)} />
+          </>
+        )}
+        {movingAll && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMovingAll(false)} />
+            <MoveAllMenu
+              columns={columns.filter((c) => c.id !== column.id && !(prefs.hiddenColumns || []).includes(c.id))}
+              count={tasks.length}
+              onPick={(target) => moveTasksToColumn(tasks.map((t) => t.id), target)}
+              onClose={() => setMovingAll(false)}
+            />
           </>
         )}
         {sendingReview && (
@@ -308,7 +355,7 @@ export default function Column({ column, tasks, onCardClick }) {
         </p>
       )}
       <SortableContext items={visibleTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+        <div ref={setNodeRef} data-col-scroll className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
           {visibleTasks.length === 0 ? (
             <EmptyState
               icon={Inbox}
