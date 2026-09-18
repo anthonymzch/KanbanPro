@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, Check, CheckCircle2, Copy, ListChecks, XCircle } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, Copy, ListChecks, Loader2, Paperclip, X, XCircle } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
@@ -16,9 +16,71 @@ function taskToText(task) {
   return parts.join('\n\n')
 }
 
+// Capturas de pantalla adjuntas a la corrección de una tarea
+function CorrectionImages({ task }) {
+  const { addCorrectionImage, removeCorrectionImage } = useStore()
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef(null)
+  const images = task.correctionImages || []
+
+  const handleFiles = async (fileList) => {
+    const files = [...fileList].filter((f) => f.type.startsWith('image/'))
+    if (!files.length) return
+    setUploading(true)
+    for (const file of files) {
+      await addCorrectionImage(task.id, file)
+    }
+    setUploading(false)
+  }
+
+  return (
+    <div className="mt-1.5">
+      {images.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {images.map((url) => (
+            <div key={url} className="group/img relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-edge">
+              <a href={url} target="_blank" rel="noreferrer" title="Abrir en pestaña nueva (clic derecho para copiar la imagen)">
+                <img src={url} alt="Captura de pantalla" className="h-full w-full object-cover" />
+              </a>
+              <button
+                type="button"
+                onClick={() => removeCorrectionImage(task.id, url)}
+                title="Quitar captura"
+                className="absolute right-0 top-0 rounded-bl-md bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover/img:opacity-100"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          handleFiles(e.target.files)
+          e.target.value = ''
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="flex items-center gap-1 rounded-md border border-dashed border-edge px-2 py-1 text-[11px] text-faint transition-colors hover:border-cyan/40 hover:text-ink disabled:opacity-50"
+      >
+        {uploading ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
+        {uploading ? 'Subiendo…' : 'Adjuntar captura'}
+      </button>
+    </div>
+  )
+}
+
 // Checks de revisión (correcto / a corregir) para tareas que pasaron por "Revisión"
 export function ReviewControls({ task, defaultNoteOpen = false }) {
-  const { updateTask } = useStore()
+  const { updateTask, addCorrectionImage } = useStore()
   const [correction, setCorrection] = useState(task.correctionNote || '')
   const [noteOpen, setNoteOpen] = useState(defaultNoteOpen)
 
@@ -76,14 +138,24 @@ export function ReviewControls({ task, defaultNoteOpen = false }) {
         </button>
       </div>
       {task.reviewStatus === 'fix' && (
-        <textarea
-          rows={2}
-          value={correction}
-          onChange={(e) => setCorrection(e.target.value)}
-          onBlur={saveCorrection}
-          placeholder="¿Qué hay que corregir?"
-          className="mt-1.5 w-full resize-none rounded-md border border-edge bg-raised p-1.5 text-[11px] text-ink placeholder:text-faint focus:outline-none focus:border-red-400/40"
-        />
+        <>
+          <textarea
+            rows={2}
+            value={correction}
+            onChange={(e) => setCorrection(e.target.value)}
+            onBlur={saveCorrection}
+            onPaste={(e) => {
+              const item = [...(e.clipboardData?.items || [])].find((it) => it.type.startsWith('image/'))
+              if (!item) return
+              e.preventDefault()
+              const file = item.getAsFile()
+              if (file) addCorrectionImage(task.id, file)
+            }}
+            placeholder="¿Qué hay que corregir? (puedes pegar una captura aquí)"
+            className="mt-1.5 w-full resize-none rounded-md border border-edge bg-raised p-1.5 text-[11px] text-ink placeholder:text-faint focus:outline-none focus:border-red-400/40"
+          />
+          <CorrectionImages task={task} />
+        </>
       )}
     </div>
   )

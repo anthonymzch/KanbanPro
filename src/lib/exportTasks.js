@@ -42,14 +42,23 @@ export function buildColumnExport(column, tasks, projects = [], instructions = D
   return `${header}${SEPARATOR}${body}\n`
 }
 
+export function needsCorrection(task) {
+  return task.reviewStatus === 'fix' && (task.correctionNote?.trim() || (task.correctionImages || []).length > 0)
+}
+
 export function buildCorrectionsExport(tasks, projects = []) {
-  const toFix = tasks.filter((t) => t.reviewStatus === 'fix' && t.correctionNote?.trim())
+  const toFix = tasks.filter(needsCorrection)
   if (!toFix.length) return ''
+
+  const anyImages = toFix.some((t) => (t.correctionImages || []).length > 0)
 
   const header = [
     `Correcciones pendientes — columna "Revisión" (${toFix.length} tarea${toFix.length === 1 ? '' : 's'})`,
     '',
     'Instrucciones: corrige cada tarea según lo indicado, una por una. Al terminar todas, dime qué corregiste en cada una.',
+    ...(anyImages
+      ? ['Algunas correcciones traen capturas de pantalla: ábrelas desde el enlace, o pégalas aquí en el chat si hace falta.']
+      : []),
   ].join('\n')
 
   const body = toFix
@@ -57,7 +66,12 @@ export function buildCorrectionsExport(tasks, projects = []) {
       const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
       const lines = [`Corrección ${i + 1}/${toFix.length}: ${task.title}`]
       if (project) lines.push(`Proyecto: ${project.name}`)
-      lines.push('', 'Qué corregir:', task.correctionNote.trim())
+      if (task.correctionNote?.trim()) lines.push('', 'Qué corregir:', task.correctionNote.trim())
+      const images = task.correctionImages || []
+      if (images.length) {
+        lines.push('', `Capturas adjuntas (${images.length}):`)
+        images.forEach((url, idx) => lines.push(`${idx + 1}. ${url}`))
+      }
       return lines.join('\n')
     })
     .join(SEPARATOR)

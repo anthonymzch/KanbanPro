@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -12,7 +14,8 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
+import { db, storage } from '../lib/firebase'
 import { COLUMNS } from '../lib/constants'
 import { useAuth } from './useAuth'
 import { useToast } from './useToast'
@@ -208,6 +211,27 @@ export function StoreProvider({ children }) {
         })
         batch.commit().catch(fail)
         toast(`${items.length} ${items.length === 1 ? 'tarea enviada' : 'tareas enviadas'} a revisión`)
+      },
+      // Sube una captura de pantalla y la adjunta a la corrección de la tarea
+      addCorrectionImage: async (taskId, file) => {
+        try {
+          const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')
+          const path = `users/${uid}/tasks/${taskId}/corrections/${crypto.randomUUID()}.${ext}`
+          const fileRef = storageRef(storage, path)
+          await uploadBytes(fileRef, file, { contentType: file.type })
+          const url = await getDownloadURL(fileRef)
+          await updateDoc(doc(tasksCol, taskId), { correctionImages: arrayUnion(url), updatedAt: serverTimestamp() })
+        } catch (err) {
+          fail(err)
+        }
+      },
+      removeCorrectionImage: async (taskId, url) => {
+        try {
+          await updateDoc(doc(tasksCol, taskId), { correctionImages: arrayRemove(url), updatedAt: serverTimestamp() })
+          await deleteObject(storageRef(storage, url))
+        } catch (err) {
+          fail(err)
+        }
       },
 
       addIdea: ({ title, description = '', category = 'nueva-app', projectId = null }) => {

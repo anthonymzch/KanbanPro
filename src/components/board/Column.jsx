@@ -17,7 +17,7 @@ import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
 import { useStore } from '../../hooks/useStore'
-import { buildColumnExport, buildCorrectionsExport } from '../../lib/exportTasks'
+import { buildColumnExport, buildCorrectionsExport, needsCorrection } from '../../lib/exportTasks'
 import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS, projectColor } from '../../lib/constants'
 import { isWithinDays } from '../../lib/dates'
 import { splitReviewNotes } from '../../lib/reviewNotes'
@@ -165,9 +165,7 @@ export default function Column({ column, tasks, onCardClick }) {
   const exportPrompt = prefs.exportPrompt || DEFAULT_EXPORT_PROMPT
 
   const visibleTasks = isDoneCol && weekOnly ? tasks.filter((t) => isWithinDays(t.updatedAt, 7)) : tasks
-  const fixCount = isReviewCol
-    ? tasks.filter((t) => t.reviewStatus === 'fix' && t.correctionNote?.trim()).length
-    : 0
+  const fixCount = isReviewCol ? tasks.filter(needsCorrection).length : 0
 
   const handleCopyColumn = async () => {
     try {
