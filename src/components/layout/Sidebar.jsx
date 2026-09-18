@@ -31,6 +31,7 @@ function ProjectList() {
   const { filters, setFilters, openProjects } = useUI()
   const navigate = useNavigate()
 
+  const activeProjects = projects.filter((p) => !p.archived)
   const count = (id) => tasks.filter((t) => t.projectId === id && t.column !== 'archived').length
 
   const select = (id) => {
@@ -53,7 +54,7 @@ function ProjectList() {
           <Settings2 size={12} />
         </button>
       </div>
-      {projects.map((p) => (
+      {activeProjects.map((p) => (
         <button
           key={p.id}
           onClick={() => select(p.id)}
@@ -66,7 +67,7 @@ function ProjectList() {
           <span className="font-mono text-[10px] text-faint">{count(p.id) || ''}</span>
         </button>
       ))}
-      {projects.length === 0 && (
+      {activeProjects.length === 0 && (
         <button
           onClick={openProjects}
           className="w-full rounded-lg border border-dashed border-edge px-3 py-2 text-xs text-faint transition-colors hover:border-cyan/40 hover:text-ink"

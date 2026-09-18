@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { COLUMNS } from '../lib/constants'
 import { useAuth } from './useAuth'
 import { useToast } from './useToast'
 
@@ -23,10 +24,17 @@ export function StoreProvider({ children }) {
   const toast = useToast()
   const uid = user.uid
 
-  const [prefs, setPrefs] = useState({ theme: 'dark', wipLimit: null, exportPrompt: null })
+  const [prefs, setPrefs] = useState({
+    theme: 'dark',
+    wipLimit: null,
+    exportPrompt: null,
+    hiddenColumns: [],
+    hiddenFilters: [],
+  })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
   const [projects, setProjects] = useState([])
+  const [customColumns, setCustomColumns] = useState([])
   // Último order asignado por columna: evita duplicados si se crean
   // varias tareas antes de que llegue el snapshot con la anterior.
   const lastOrderRef = useRef({})
@@ -37,7 +45,14 @@ export function StoreProvider({ children }) {
     const unsubs = [
       onSnapshot(doc(db, 'users', uid), (snap) => {
         const d = snap.data()
-        if (d) setPrefs({ theme: d.theme || 'dark', wipLimit: d.wipLimit ?? null, exportPrompt: d.exportPrompt ?? null })
+        if (d)
+          setPrefs({
+            theme: d.theme || 'dark',
+            wipLimit: d.wipLimit ?? null,
+            exportPrompt: d.exportPrompt ?? null,
+            hiddenColumns: d.hiddenColumns ?? [],
+            hiddenFilters: d.hiddenFilters ?? [],
+          })
       }),
       onSnapshot(query(collection(db, 'users', uid, 'tasks'), orderBy('order')), (snap) => {
         setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
@@ -47,6 +62,9 @@ export function StoreProvider({ children }) {
       }),
       onSnapshot(query(collection(db, 'users', uid, 'projects'), orderBy('createdAt')), (snap) => {
         setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      }),
+      onSnapshot(query(collection(db, 'users', uid, 'columns'), orderBy('createdAt')), (snap) => {
+        setCustomColumns(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       }),
     ]
     return () => unsubs.forEach((u) => u())
@@ -62,6 +80,7 @@ export function StoreProvider({ children }) {
     const tasksCol = collection(db, 'users', uid, 'tasks')
     const ideasCol = collection(db, 'users', uid, 'ideas')
     const projectsCol = collection(db, 'users', uid, 'projects')
+    const columnsCol = collection(db, 'users', uid, 'columns')
     const fail = (err) => {
       console.error(err)
       toast('Error al guardar los cambios', 'error')
@@ -79,6 +98,8 @@ export function StoreProvider({ children }) {
       tasks,
       ideas,
       projects,
+      customColumns,
+      columns: [...COLUMNS, ...customColumns.map((c) => ({ id: c.id, label: c.label, color: c.color, custom: true }))],
 
       setTheme: (theme) => {
         setPrefs((p) => ({ ...p, theme }))
@@ -91,6 +112,30 @@ export function StoreProvider({ children }) {
       setExportPrompt: (exportPrompt) => {
         setPrefs((p) => ({ ...p, exportPrompt }))
         updateDoc(userRef, { exportPrompt }).catch(fail)
+      },
+      setHiddenColumns: (hiddenColumns) => {
+        setPrefs((p) => ({ ...p, hiddenColumns }))
+        updateDoc(userRef, { hiddenColumns }).catch(fail)
+      },
+      setHiddenFilters: (hiddenFilters) => {
+        setPrefs((p) => ({ ...p, hiddenFilters }))
+        updateDoc(userRef, { hiddenFilters }).catch(fail)
+      },
+
+      addColumn: ({ label, color = 'blue' }) => {
+        addDoc(columnsCol, { label, color, createdAt: serverTimestamp() }).catch(fail)
+        toast('Columna creada')
+      },
+      updateColumn: (id, patch) => {
+        updateDoc(doc(columnsCol, id), patch).catch(fail)
+      },
+      // Borra la columna y sus tareas vuelven al Backlog
+      deleteColumn: (id) => {
+        const batch = writeBatch(db)
+        batch.delete(doc(columnsCol, id))
+        tasks.filter((t) => t.column === id).forEach((t) => batch.update(doc(tasksCol, t.id), { column: 'backlog' }))
+        batch.commit().catch(fail)
+        toast('Columna eliminada')
       },
 
       addProject: ({ name, color = 'blue' }) => {
@@ -197,7 +242,7 @@ export function StoreProvider({ children }) {
         toast('Idea enviada al Backlog 🚀')
       },
     }
-  }, [uid, prefs, tasks, ideas, projects, toast])
+  }, [uid, prefs, tasks, ideas, projects, customColumns, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

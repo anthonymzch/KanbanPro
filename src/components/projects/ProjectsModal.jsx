@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Pencil, Trash2 } from 'lucide-react'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useStore } from '../../hooks/useStore'
@@ -64,16 +64,21 @@ export default function ProjectsModal() {
   const [editingId, setEditingId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [showArchived, setShowArchived] = useState(false)
 
   const taskCount = (id) => tasks.filter((t) => t.projectId === id).length
+  const activeProjects = projects.filter((p) => !p.archived)
+  const archivedProjects = projects.filter((p) => p.archived)
+  const visibleProjects = showArchived ? projects : activeProjects
 
   return (
     <Modal onClose={closeProjects} eyebrow="<proyectos />" title="Proyectos">
       <p className="mb-4 text-xs text-muted">
-        Agrupa tus tarjetas por proyecto: cada uno tiene su color y puedes filtrar el tablero con un clic.
+        Agrupa tus tarjetas por proyecto: cada uno tiene su color y puedes filtrar el tablero con un clic. Marca un
+        proyecto como finalizado para que deje de aparecer en los filtros sin perder sus tareas.
       </p>
       <div className="space-y-1">
-        {projects.map((p) =>
+        {visibleProjects.map((p) =>
           editingId === p.id ? (
             <div key={p.id} className="rounded-lg border border-edge bg-raised p-3">
               <ProjectForm
@@ -88,11 +93,18 @@ export default function ProjectsModal() {
             </div>
           ) : (
             <div key={p.id} className="group flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-raised">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${projectColor(p.color).dot}`} />
-              <span className="flex-1 truncate text-sm text-ink">{p.name}</span>
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${projectColor(p.color).dot} ${p.archived ? 'opacity-40' : ''}`} />
+              <span className={`flex-1 truncate text-sm ${p.archived ? 'text-faint' : 'text-ink'}`}>{p.name}</span>
               <span className="font-mono text-[10px] text-faint">
                 {taskCount(p.id)} {taskCount(p.id) === 1 ? 'tarea' : 'tareas'}
               </span>
+              <button
+                onClick={() => updateProject(p.id, { archived: !p.archived })}
+                title={p.archived ? 'Reactivar proyecto' : 'Marcar como finalizado'}
+                className="rounded-md p-1.5 text-faint opacity-0 transition-all hover:bg-surface hover:text-ink group-hover:opacity-100"
+              >
+                {p.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+              </button>
               <button
                 onClick={() => setEditingId(p.id)}
                 title="Editar"
@@ -116,6 +128,16 @@ export default function ProjectsModal() {
           </p>
         )}
       </div>
+
+      {archivedProjects.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowArchived((s) => !s)}
+          className="mt-2 text-[11px] text-faint transition-colors hover:text-ink"
+        >
+          {showArchived ? 'Ocultar' : 'Mostrar'} finalizados ({archivedProjects.length})
+        </button>
+      )}
 
       {adding ? (
         <div className="mt-3 rounded-lg border border-edge bg-raised p-3">

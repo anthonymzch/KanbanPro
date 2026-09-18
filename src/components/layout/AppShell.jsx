@@ -4,6 +4,7 @@ import { useUI } from '../../hooks/useUI'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import TaskModal from '../board/TaskModal'
+import ColumnsModal from '../board/ColumnsModal'
 import IdeaFormModal from '../ideas/IdeaFormModal'
 import ProjectsModal from '../projects/ProjectsModal'
 import CommandPalette from '../ui/CommandPalette'
@@ -28,7 +29,7 @@ function MobileNav() {
 }
 
 export default function AppShell() {
-  const { taskModal, ideaModal, paletteOpen, projectsOpen } = useUI()
+  const { taskModal, ideaModal, paletteOpen, projectsOpen, columnsOpen } = useUI()
 
   return (
     <div className="flex h-screen overflow-hidden bg-base">
@@ -44,6 +45,7 @@ export default function AppShell() {
       {taskModal && <TaskModal />}
       {ideaModal && <IdeaFormModal />}
       {projectsOpen && <ProjectsModal />}
+      {columnsOpen && <ColumnsModal />}
       {paletteOpen && <CommandPalette />}
     </div>
   )

@@ -16,18 +16,23 @@ import { CardBody } from '../components/board/TaskCard'
 import { useStore } from '../hooks/useStore'
 import { useToast } from '../hooks/useToast'
 import { useUI } from '../hooks/useUI'
-import { COLUMNS, COLUMN_IDS } from '../lib/constants'
 
-function buildColumns(tasks) {
-  const map = Object.fromEntries(COLUMN_IDS.map((c) => [c, []]))
+function buildColumns(tasks, columnIds) {
+  const map = Object.fromEntries(columnIds.map((c) => [c, []]))
   for (const t of tasks) (map[t.column] || map.backlog).push(t.id)
   return map
 }
 
 export default function BoardPage() {
-  const { tasks, moveTask } = useStore()
+  const { tasks, moveTask, columns, prefs } = useStore()
   const { filters, openTaskModal } = useUI()
   const toast = useToast()
+
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns])
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => !(prefs.hiddenColumns || []).includes(c.id)),
+    [columns, prefs.hiddenColumns],
+  )
 
   // tasks ya viene ordenado por `order` desde Firestore
   const visible = useMemo(() => {
@@ -44,19 +49,19 @@ export default function BoardPage() {
   const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks])
 
   // cols: { columnId: [taskId] } — copia local para el drag optimista
-  const [cols, setCols] = useState(() => buildColumns(visible))
+  const [cols, setCols] = useState(() => buildColumns(visible, columnIds))
   const [activeId, setActiveId] = useState(null)
   const dragging = useRef(false)
 
-  const rebuild = useCallback(() => setCols(buildColumns(visible)), [visible])
+  const rebuild = useCallback(() => setCols(buildColumns(visible, columnIds)), [visible, columnIds])
 
   useEffect(() => {
     if (!dragging.current) rebuild()
   }, [rebuild])
 
   const findCol = useCallback(
-    (id) => (COLUMN_IDS.includes(id) ? id : COLUMN_IDS.find((c) => cols[c]?.includes(id))),
-    [cols],
+    (id) => (columnIds.includes(id) ? id : columnIds.find((c) => cols[c]?.includes(id))),
+    [cols, columnIds],
   )
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -111,7 +116,7 @@ export default function BoardPage() {
     }
 
     let ids = [...(cols[col] || [])]
-    if (over.id !== active.id && !COLUMN_IDS.includes(over.id) && findCol(over.id) === col) {
+    if (over.id !== active.id && !columnIds.includes(over.id) && findCol(over.id) === col) {
       ids = arrayMove(ids, ids.indexOf(active.id), ids.indexOf(over.id))
       setCols((prev) => ({ ...prev, [col]: ids }))
     }
@@ -146,7 +151,7 @@ export default function BoardPage() {
       })
       toast('Tarea completada 🎉')
     } else if (task.column !== col) {
-      toast(`Movida a ${COLUMNS.find((c) => c.id === col).label}`, 'info')
+      toast(`Movida a ${columns.find((c) => c.id === col)?.label || col}`, 'info')
     }
   }
 
@@ -163,7 +168,7 @@ export default function BoardPage() {
       onDragCancel={onDragCancel}
     >
       <div className="board-scroll flex h-full gap-4 overflow-x-auto overflow-y-hidden p-4 md:p-6">
-        {COLUMNS.map((column) => (
+        {visibleColumns.map((column) => (
           <Column
             key={column.id}
             column={column}

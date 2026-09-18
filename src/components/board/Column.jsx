@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { AlertTriangle, Check, Clipboard, Inbox, MessageSquareText, Settings2 } from 'lucide-react'
+import { AlertTriangle, Check, Clipboard, History, Inbox, MessageSquareText, Settings2 } from 'lucide-react'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
 import { useStore } from '../../hooks/useStore'
 import { buildColumnExport } from '../../lib/exportTasks'
-import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS } from '../../lib/constants'
+import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS, projectColor } from '../../lib/constants'
+import { isWithinDays } from '../../lib/dates'
 
 const DOTS = {
   backlog: 'bg-slate-400',
@@ -101,15 +102,19 @@ export default function Column({ column, tasks, onCardClick }) {
   const [editingWip, setEditingWip] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [weekOnly, setWeekOnly] = useState(false)
 
   const isWipCol = column.id === 'inprogress'
+  const isDoneCol = column.id === 'done'
   const wipLimit = prefs.wipLimit
   const overWip = isWipCol && wipLimit && tasks.length > wipLimit
   const exportPrompt = prefs.exportPrompt || DEFAULT_EXPORT_PROMPT
 
+  const visibleTasks = isDoneCol && weekOnly ? tasks.filter((t) => isWithinDays(t.updatedAt, 7)) : tasks
+
   const handleCopyColumn = async () => {
     try {
-      await navigator.clipboard.writeText(buildColumnExport(column, tasks, projects, exportPrompt))
+      await navigator.clipboard.writeText(buildColumnExport(column, visibleTasks, projects, exportPrompt))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -124,14 +129,16 @@ export default function Column({ column, tasks, onCardClick }) {
       }`}
     >
       <header className="flex items-center gap-2 px-3 pb-1 pt-3">
-        <span className={`h-2 w-2 rounded-full ${DOTS[column.id]}`} />
+        <span
+          className={`h-2 w-2 rounded-full ${column.custom ? projectColor(column.color).dot : DOTS[column.id] || 'bg-slate-400'}`}
+        />
         <h3 className="font-display text-sm font-semibold text-ink">{column.label}</h3>
         <span
           className={`rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
             overWip ? 'bg-red-500/15 text-red-400' : 'bg-raised text-faint'
           }`}
         >
-          {tasks.length}
+          {visibleTasks.length}
           {isWipCol && wipLimit ? `/${wipLimit}` : ''}
         </span>
         <span className="ml-auto flex items-center gap-1">
@@ -139,6 +146,17 @@ export default function Column({ column, tasks, onCardClick }) {
             <span title="Límite WIP superado">
               <AlertTriangle size={13} className="text-red-400" />
             </span>
+          )}
+          {isDoneCol && (
+            <button
+              onClick={() => setWeekOnly((w) => !w)}
+              title={weekOnly ? 'Mostrar todo el historial' : 'Mostrar solo lo completado esta semana'}
+              className={`rounded p-1 transition-opacity hover:opacity-100 ${
+                weekOnly ? 'text-cyan opacity-100' : 'text-faint opacity-60 hover:text-ink'
+              }`}
+            >
+              <History size={13} />
+            </button>
           )}
           {isWipCol &&
             (editingWip ? (
@@ -180,12 +198,20 @@ export default function Column({ column, tasks, onCardClick }) {
           Límite WIP superado — termina algo antes de empezar más.
         </p>
       )}
-      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={visibleTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
-          {tasks.length === 0 ? (
-            <EmptyState icon={Inbox} title={EMPTY_HINTS[column.id]} compact />
+          {visibleTasks.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title={
+                isDoneCol && weekOnly && tasks.length > 0
+                  ? 'Nada completado esta semana'
+                  : EMPTY_HINTS[column.id] || 'Sin tareas'
+              }
+              compact
+            />
           ) : (
-            tasks.map((task) => <TaskCard key={task.id} task={task} onClick={onCardClick} />)
+            visibleTasks.map((task) => <TaskCard key={task.id} task={task} onClick={onCardClick} />)
           )}
         </div>
       </SortableContext>

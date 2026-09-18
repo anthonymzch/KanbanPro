@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Command, LogOut, Moon, Sun } from 'lucide-react'
+import { Columns3, Command, LogOut, Moon, Sun } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
@@ -8,7 +8,7 @@ import FilterBar from '../board/FilterBar'
 export default function TopBar() {
   const { pathname } = useLocation()
   const { prefs, setTheme } = useStore()
-  const { setPaletteOpen } = useUI()
+  const { setPaletteOpen, openColumns } = useUI()
   const { logout } = useAuth()
   const isBoard = pathname === '/'
   const dark = prefs.theme !== 'light'
@@ -18,11 +18,22 @@ export default function TopBar() {
       <div className="md:hidden">
         <span className="grad-text font-display text-base font-bold">KanbanPro</span>
       </div>
-      <div className="hidden md:block">
-        <span className="eyebrow">{isBoard ? '<tablero />' : '<ideas />'}</span>
-        <h2 className="font-display text-base font-semibold leading-tight text-ink">
-          {isBoard ? 'Tablero' : 'Lluvia de ideas'}
-        </h2>
+      <div className="hidden items-start gap-1.5 md:flex">
+        <div>
+          <span className="eyebrow">{isBoard ? '<tablero />' : '<ideas />'}</span>
+          <h2 className="font-display text-base font-semibold leading-tight text-ink">
+            {isBoard ? 'Tablero' : 'Lluvia de ideas'}
+          </h2>
+        </div>
+        {isBoard && (
+          <button
+            onClick={openColumns}
+            title="Gestionar columnas"
+            className="mt-0.5 rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+          >
+            <Columns3 size={14} />
+          </button>
+        )}
       </div>
 
       {isBoard && <FilterBar />}

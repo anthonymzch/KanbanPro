@@ -5,14 +5,16 @@ import Badge from '../ui/Badge'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
-import { COLUMNS, PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constants'
+import { PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constants'
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask, projects, tasks } = useStore()
+  const { addTask, updateTask, deleteTask, projects, tasks, columns } = useStore()
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
   const isNew = !task
+  // No se puede asignar a un proyecto finalizado, salvo que la tarea ya lo tuviera
+  const selectableProjects = projects.filter((p) => !p.archived || p.id === task?.projectId)
 
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
@@ -97,9 +99,10 @@ export default function TaskModal() {
               <div className="flex items-center gap-1.5">
                 <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${selectCls} w-full`}>
                   <option value="">Sin proyecto</option>
-                  {projects.map((p) => (
+                  {selectableProjects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
+                      {p.archived ? ' (finalizado)' : ''}
                     </option>
                   ))}
                 </select>
@@ -116,7 +119,7 @@ export default function TaskModal() {
             <label className="block">
               <span className="mb-1 block font-mono text-[11px] text-faint">columna</span>
               <select value={column} onChange={(e) => setColumn(e.target.value)} className={`${selectCls} w-full`}>
-                {COLUMNS.map((c) => (
+                {columns.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
                   </option>

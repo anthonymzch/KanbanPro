@@ -83,3 +83,10 @@ export const EXPORT_PROMPT_PRESETS = [
 ]
 
 export const DEFAULT_EXPORT_PROMPT = EXPORT_PROMPT_PRESETS[0].text
+
+// Filtros opcionales del tablero (la búsqueda siempre está visible)
+export const FILTER_DEFS = [
+  { id: 'projects', label: 'Proyecto' },
+  { id: 'priority', label: 'Prioridad' },
+  { id: 'tag', label: 'Etiqueta' },
+]

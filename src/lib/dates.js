@@ -10,3 +10,10 @@ export function dueMeta(dueDate) {
   const label = new Date(y, m - 1, d).toLocaleDateString('es', { day: 'numeric', month: 'short' })
   return { overdue, soon, label }
 }
+
+// timestamp: Firestore Timestamp (updatedAt/createdAt)
+export function isWithinDays(timestamp, days) {
+  if (!timestamp?.toDate) return false
+  const elapsed = Date.now() - timestamp.toDate().getTime()
+  return elapsed >= 0 && elapsed <= days * 86400000
+}
