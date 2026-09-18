@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Lightbulb, LogOut, Settings2, SquareKanban } from 'lucide-react'
+import { ChevronRight, Lightbulb, LogOut, Settings2, SquareKanban } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
@@ -42,19 +43,33 @@ function DraggableProject({ id, children }) {
   )
 }
 
-function DropZone({ id, label, count, empty, children }) {
+function DropZone({ id, label, count, empty, collapsible, children }) {
   const { setNodeRef, isOver } = useDroppable({ id })
+  const [collapsed, setCollapsed] = useState(false)
   return (
     <div className={label ? 'mt-3' : ''}>
-      {label && (
-        <div className="flex items-center gap-1.5 px-3 pb-1">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-faint">{label}</span>
-          {count > 0 && <span className="font-mono text-[10px] text-faint">{count}</span>}
-        </div>
-      )}
+      {label &&
+        (collapsible ? (
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="flex w-full items-center gap-1 px-3 pb-1 text-left"
+          >
+            <ChevronRight size={11} className={`text-faint transition-transform ${collapsed ? '' : 'rotate-90'}`} />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-faint">{label}</span>
+            {count > 0 && <span className="ml-auto font-mono text-[10px] text-faint">{count}</span>}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 px-3 pb-1">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-faint">{label}</span>
+            {count > 0 && <span className="font-mono text-[10px] text-faint">{count}</span>}
+          </div>
+        ))}
       <div
         ref={setNodeRef}
-        className={`space-y-0.5 rounded-lg transition-colors ${isOver ? 'bg-raised/70 ring-1 ring-cyan/40' : ''}`}
+        className={`space-y-0.5 rounded-lg transition-colors ${isOver ? 'bg-raised/70 ring-1 ring-cyan/40' : ''} ${
+          collapsed ? 'hidden' : ''
+        }`}
       >
         {children}
         {empty && (
@@ -138,7 +153,13 @@ function ProjectList() {
           )}
         </DropZone>
 
-        <DropZone id="finished" label="Proyectos Finalizados" count={finished.length} empty={finished.length === 0}>
+        <DropZone
+          id="finished"
+          label="Proyectos Finalizados"
+          count={finished.length}
+          empty={finished.length === 0}
+          collapsible
+        >
           {finished.map((p) => (
             <DraggableProject key={p.id} id={p.id}>
               <ProjectRow p={p} count={count(p.id)} selected={filters.projects.includes(p.id)} onSelect={() => select(p.id)} />
@@ -146,7 +167,13 @@ function ProjectList() {
           ))}
         </DropZone>
 
-        <DropZone id="archived" label="Proyectos Archivados" count={archived.length} empty={archived.length === 0}>
+        <DropZone
+          id="archived"
+          label="Proyectos Archivados"
+          count={archived.length}
+          empty={archived.length === 0}
+          collapsible
+        >
           {archived.map((p) => (
             <DraggableProject key={p.id} id={p.id}>
               <ProjectRow p={p} count={count(p.id)} selected={filters.projects.includes(p.id)} onSelect={() => select(p.id)} />
