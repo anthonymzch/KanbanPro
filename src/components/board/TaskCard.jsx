@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, Check, Copy, ListChecks } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, Copy, ListChecks, XCircle } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
@@ -14,6 +14,79 @@ function taskToText(task) {
     parts.push(task.subtasks.map((s) => `- [${s.done ? 'x' : ' '}] ${s.title}`).join('\n'))
   }
   return parts.join('\n\n')
+}
+
+// Checks de revisión (correcto / a corregir) para tarjetas en la columna "Revisión"
+function ReviewControls({ task }) {
+  const { updateTask } = useStore()
+  const [correction, setCorrection] = useState(task.correctionNote || '')
+  const [noteOpen, setNoteOpen] = useState(false)
+
+  const setStatus = (status) => () => {
+    updateTask(task.id, { reviewStatus: status, ...(status === 'ok' ? { correctionNote: null } : {}) }, { silent: true })
+    if (status === 'ok') setCorrection('')
+  }
+
+  const saveCorrection = () => {
+    updateTask(task.id, { correctionNote: correction.trim() || null }, { silent: true })
+  }
+
+  return (
+    <div
+      className="mt-2 border-t border-edge pt-2"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {task.reviewNote && (
+        <button
+          type="button"
+          onClick={() => setNoteOpen((o) => !o)}
+          className="mb-1.5 text-left text-[11px] text-faint underline decoration-dotted hover:text-ink"
+        >
+          {noteOpen ? 'Ocultar' : 'Ver'} nota de Claude
+        </button>
+      )}
+      {noteOpen && (
+        <p className="mb-2 max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md bg-raised p-2 text-[11px] leading-relaxed text-muted">
+          {task.reviewNote}
+        </p>
+      )}
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={setStatus('ok')}
+          className={`flex flex-1 items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+            task.reviewStatus === 'ok'
+              ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
+              : 'border-edge text-faint hover:text-ink'
+          }`}
+        >
+          <CheckCircle2 size={12} /> Correcto
+        </button>
+        <button
+          type="button"
+          onClick={setStatus('fix')}
+          className={`flex flex-1 items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+            task.reviewStatus === 'fix'
+              ? 'border-red-500/40 bg-red-500/15 text-red-400'
+              : 'border-edge text-faint hover:text-ink'
+          }`}
+        >
+          <XCircle size={12} /> Corregir
+        </button>
+      </div>
+      {task.reviewStatus === 'fix' && (
+        <textarea
+          rows={2}
+          value={correction}
+          onChange={(e) => setCorrection(e.target.value)}
+          onBlur={saveCorrection}
+          placeholder="¿Qué hay que corregir?"
+          className="mt-1.5 w-full resize-none rounded-md border border-edge bg-raised p-1.5 text-[11px] text-ink placeholder:text-faint focus:outline-none focus:border-red-400/40"
+        />
+      )}
+    </div>
+  )
 }
 
 export function CardBody({ task, overlay = false }) {
@@ -105,6 +178,7 @@ export function CardBody({ task, overlay = false }) {
           </button>
         )}
       </div>
+      {!overlay && task.column === 'review' && <ReviewControls task={task} />}
     </div>
   )
 }

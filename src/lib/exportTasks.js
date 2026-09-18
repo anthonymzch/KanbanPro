@@ -41,3 +41,26 @@ export function buildColumnExport(column, tasks, projects = [], instructions = D
 
   return `${header}${SEPARATOR}${body}\n`
 }
+
+export function buildCorrectionsExport(tasks, projects = []) {
+  const toFix = tasks.filter((t) => t.reviewStatus === 'fix' && t.correctionNote?.trim())
+  if (!toFix.length) return ''
+
+  const header = [
+    `Correcciones pendientes — columna "Revisión" (${toFix.length} tarea${toFix.length === 1 ? '' : 's'})`,
+    '',
+    'Instrucciones: corrige cada tarea según lo indicado, una por una. Al terminar todas, dime qué corregiste en cada una.',
+  ].join('\n')
+
+  const body = toFix
+    .map((task, i) => {
+      const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
+      const lines = [`Corrección ${i + 1}/${toFix.length}: ${task.title}`]
+      if (project) lines.push(`Proyecto: ${project.name}`)
+      lines.push('', 'Qué corregir:', task.correctionNote.trim())
+      return lines.join('\n')
+    })
+    .join(SEPARATOR)
+
+  return `${header}${SEPARATOR}${body}\n`
+}

@@ -192,6 +192,22 @@ export function StoreProvider({ children }) {
       moveTask: (id, column, order) => {
         updateDoc(doc(tasksCol, id), { column, order, updatedAt: serverTimestamp() }).catch(fail)
       },
+      // Manda de una vez todas las tareas indicadas a Revisión con la nota de Claude adjunta
+      sendToReview: (ids, note) => {
+        const batch = writeBatch(db)
+        ids.forEach((id) => {
+          batch.update(doc(tasksCol, id), {
+            column: 'review',
+            order: nextOrder('review'),
+            reviewNote: note,
+            reviewStatus: null,
+            correctionNote: null,
+            updatedAt: serverTimestamp(),
+          })
+        })
+        batch.commit().catch(fail)
+        toast(`${ids.length} ${ids.length === 1 ? 'tarea enviada' : 'tareas enviadas'} a revisión`)
+      },
 
       addIdea: ({ title, description = '', category = 'nueva-app', projectId = null }) => {
         addDoc(ideasCol, {

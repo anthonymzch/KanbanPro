@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { AlertTriangle, Check, Clipboard, History, Inbox, MessageSquareText, Settings2 } from 'lucide-react'
+import { AlertTriangle, Check, Clipboard, History, Inbox, MessageSquareText, Send, Settings2, Wrench } from 'lucide-react'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
 import { useStore } from '../../hooks/useStore'
-import { buildColumnExport } from '../../lib/exportTasks'
+import { buildColumnExport, buildCorrectionsExport } from '../../lib/exportTasks'
 import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS, projectColor } from '../../lib/constants'
 import { isWithinDays } from '../../lib/dates'
 
@@ -14,6 +14,7 @@ const DOTS = {
   backlog: 'bg-slate-400',
   todo: 'bg-blue-400',
   inprogress: 'bg-cyan',
+  review: 'bg-amber-400',
   done: 'bg-emerald-400',
   archived: 'bg-slate-600',
 }
@@ -22,6 +23,7 @@ const EMPTY_HINTS = {
   backlog: 'Todo empieza aquí',
   todo: 'Nada pendiente por ahora',
   inprogress: 'Arrastra algo para empezar',
+  review: 'Nada en revisión todavía',
   done: 'Aún no hay victorias hoy',
   archived: 'El archivo está vacío',
 }
@@ -96,27 +98,76 @@ function PromptEditor({ value, onSave, onClose }) {
   )
 }
 
+function SendToReviewEditor({ onSave, onClose }) {
+  const [note, setNote] = useState('')
+  return (
+    <div className="absolute right-0 top-9 z-20 w-72 rounded-lg border border-edge bg-surface p-3 shadow-card">
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-faint">Pega el "qué hice" de Claude</p>
+      <textarea
+        autoFocus
+        rows={5}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Pega aquí el resumen que te dio Claude…"
+        className="w-full resize-none rounded-md border border-edge bg-raised p-2 text-xs leading-relaxed text-ink focus:outline-none focus:border-cyan/40"
+      />
+      <div className="mt-2 flex justify-end gap-1.5">
+        <button type="button" onClick={onClose} className="rounded-md px-2 py-1 text-[11px] text-faint hover:text-ink">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          disabled={!note.trim()}
+          onClick={() => {
+            onSave(note.trim())
+            onClose()
+          }}
+          className="rounded-md bg-cyan/20 px-2 py-1 text-[11px] font-medium text-cyan transition-colors hover:bg-cyan/30 disabled:pointer-events-none disabled:opacity-40"
+        >
+          Enviar a revisión
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit, setExportPrompt, projects } = useStore()
+  const { prefs, setWipLimit, setExportPrompt, projects, sendToReview } = useStore()
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const [editingWip, setEditingWip] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState(false)
+  const [sendingReview, setSendingReview] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [correctionsCopied, setCorrectionsCopied] = useState(false)
   const [weekOnly, setWeekOnly] = useState(false)
 
   const isWipCol = column.id === 'inprogress'
   const isDoneCol = column.id === 'done'
+  const isReviewCol = column.id === 'review'
   const wipLimit = prefs.wipLimit
   const overWip = isWipCol && wipLimit && tasks.length > wipLimit
   const exportPrompt = prefs.exportPrompt || DEFAULT_EXPORT_PROMPT
 
   const visibleTasks = isDoneCol && weekOnly ? tasks.filter((t) => isWithinDays(t.updatedAt, 7)) : tasks
+  const fixCount = isReviewCol
+    ? tasks.filter((t) => t.reviewStatus === 'fix' && t.correctionNote?.trim()).length
+    : 0
 
   const handleCopyColumn = async () => {
     try {
       await navigator.clipboard.writeText(buildColumnExport(column, visibleTasks, projects, exportPrompt))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard no disponible
+    }
+  }
+
+  const handleCopyCorrections = async () => {
+    try {
+      await navigator.clipboard.writeText(buildCorrectionsExport(tasks, projects))
+      setCorrectionsCopied(true)
+      setTimeout(() => setCorrectionsCopied(false), 1500)
     } catch {
       // clipboard no disponible
     }
@@ -170,6 +221,26 @@ export default function Column({ column, tasks, onCardClick }) {
                 <Settings2 size={13} />
               </button>
             ))}
+          {isWipCol && (
+            <button
+              onClick={() => setSendingReview(true)}
+              disabled={tasks.length === 0}
+              title="Enviar todo a Revisión junto con la nota de Claude"
+              className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:text-faint"
+            >
+              <Send size={13} />
+            </button>
+          )}
+          {isReviewCol && (
+            <button
+              onClick={handleCopyCorrections}
+              disabled={fixCount === 0}
+              title="Copiar las correcciones pendientes para pegarlas en Claude"
+              className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:text-faint"
+            >
+              {correctionsCopied ? <Check size={13} className="text-emerald-400" /> : <Wrench size={13} />}
+            </button>
+          )}
           <button
             onClick={() => setEditingPrompt(true)}
             title="Cambiar las instrucciones que se copian con las tareas"
@@ -190,6 +261,15 @@ export default function Column({ column, tasks, onCardClick }) {
           <>
             <div className="fixed inset-0 z-10" onClick={() => setEditingPrompt(false)} />
             <PromptEditor value={exportPrompt} onSave={setExportPrompt} onClose={() => setEditingPrompt(false)} />
+          </>
+        )}
+        {sendingReview && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setSendingReview(false)} />
+            <SendToReviewEditor
+              onSave={(note) => sendToReview(tasks.map((t) => t.id), note)}
+              onClose={() => setSendingReview(false)}
+            />
           </>
         )}
       </header>

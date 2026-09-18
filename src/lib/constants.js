@@ -2,6 +2,7 @@ export const COLUMNS = [
   { id: 'backlog', label: 'Backlog' },
   { id: 'todo', label: 'Por hacer' },
   { id: 'inprogress', label: 'En progreso' },
+  { id: 'review', label: 'Revisión' },
   { id: 'done', label: 'Hecho' },
   { id: 'archived', label: 'Archivado' },
 ]
