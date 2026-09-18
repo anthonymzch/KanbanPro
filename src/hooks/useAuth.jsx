@@ -22,7 +22,6 @@ async function ensureUserDoc({ uid, email, displayName }) {
       email: email || '',
       displayName: displayName || '',
       theme: 'dark',
-      wipLimit: null,
       createdAt: serverTimestamp(),
     })
   }

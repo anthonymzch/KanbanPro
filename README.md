@@ -30,7 +30,6 @@ También puedes crear tu propia cuenta con Google o email — tus datos son solo
 - **Lluvia de ideas** 💡: categorías (nueva app / mejora), votación, estados (nueva → en evaluación → aprobada → descartada) y **convertir en tarea** con un clic (hereda el proyecto).
 - **Command palette** (`Ctrl/Cmd+K`) y atajos: `N` nueva tarea, `I` nueva idea, `/` buscar.
 - **Filtros en tiempo real** por texto, proyecto, prioridad y etiqueta.
-- Límite WIP configurable en "En progreso" con aviso visual.
 - Tema oscuro/claro persistente, confeti al completar 🎉, toasts, estados vacíos cuidados y diseño responsive (columnas con scroll snap en móvil).
 
 <div align="center">
@@ -59,7 +58,7 @@ También puedes crear tu propia cuenta con Google o email — tus datos son solo
 ## Modelo de datos
 
 ```
-users/{uid}                    perfil y preferencias (tema, límite WIP)
+users/{uid}                    perfil y preferencias (tema)
 users/{uid}/projects/{id}      nombre + color
 users/{uid}/tasks/{id}         título, columna, order, etiquetas, prioridad,
                                fecha límite, projectId

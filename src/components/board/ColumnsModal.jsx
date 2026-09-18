@@ -61,18 +61,7 @@ export function ColumnForm({ initial, saveLabel = 'Crear columna', onSave, onCan
   )
 }
 
-function SortableColumnRow({
-  column,
-  hidden,
-  count,
-  editing,
-  wipLimit,
-  onWipChange,
-  onToggleHidden,
-  onEdit,
-  onDelete,
-  children,
-}) {
+function SortableColumnRow({ column, hidden, count, editing, onToggleHidden, onEdit, onDelete, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.id })
 
   return (
@@ -96,22 +85,6 @@ function SortableColumnRow({
           </button>
           {column.custom && <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${projectColor(column.color).dot}`} />}
           <span className={`flex-1 truncate text-sm ${hidden ? 'text-faint' : 'text-ink'}`}>{column.label}</span>
-          {column.id === 'inprogress' && (
-            <label className="flex items-center gap-1 font-mono text-[10px] text-faint" title="Máximo de tareas a la vez en esta columna (vacío = sin límite)">
-              límite
-              <input
-                type="number"
-                min="1"
-                defaultValue={wipLimit ?? ''}
-                placeholder="∞"
-                onBlur={(e) => {
-                  const n = parseInt(e.target.value, 10)
-                  onWipChange(Number.isFinite(n) && n > 0 ? n : null)
-                }}
-                className="w-11 rounded border border-edge bg-raised px-1 py-0.5 text-center text-xs text-ink focus:outline-none focus:border-cyan/40"
-              />
-            </label>
-          )}
           {!column.custom && <span className="font-mono text-[10px] text-faint">sistema</span>}
           <span className="font-mono text-[10px] text-faint">{count}</span>
           <button
@@ -146,8 +119,7 @@ function SortableColumnRow({
 }
 
 export default function ColumnsModal() {
-  const { tasks, columns, prefs, setHiddenColumns, setColumnOrder, setWipLimit, addColumn, updateColumn, deleteColumn } =
-    useStore()
+  const { tasks, columns, prefs, setHiddenColumns, setColumnOrder, addColumn, updateColumn, deleteColumn } = useStore()
   const { closeColumns } = useUI()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -185,8 +157,6 @@ export default function ColumnsModal() {
                 hidden={hidden.includes(c.id)}
                 count={taskCount(c.id)}
                 editing={editingId === c.id}
-                wipLimit={prefs.wipLimit}
-                onWipChange={setWipLimit}
                 onToggleHidden={() => toggleHidden(c.id)}
                 onEdit={() => setEditingId(c.id)}
                 onDelete={() => setConfirmDelete(c)}

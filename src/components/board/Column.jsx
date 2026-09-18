@@ -3,7 +3,6 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  AlertTriangle,
   ArrowRightLeft,
   Check,
   Clipboard,
@@ -166,11 +165,9 @@ export default function Column({ column, tasks, onCardClick }) {
   const [correctionsCopied, setCorrectionsCopied] = useState(false)
   const [weekOnly, setWeekOnly] = useState(false)
 
-  const isWipCol = column.id === 'inprogress'
+  const isProgressCol = column.id === 'inprogress'
   const isDoneCol = column.id === 'done'
   const isReviewCol = column.id === 'review'
-  const wipLimit = prefs.wipLimit
-  const overWip = isWipCol && wipLimit && tasks.length > wipLimit
   const exportPrompt = prefs.exportPrompt || DEFAULT_EXPORT_PROMPT
 
   const visibleTasks = isDoneCol && weekOnly ? tasks.filter((t) => isWithinDays(t.updatedAt, 7)) : tasks
@@ -206,7 +203,7 @@ export default function Column({ column, tasks, onCardClick }) {
       ref={setSortRef}
       style={{ transform: CSS.Transform.toString(sortTransform), transition: sortTransition }}
       className={`relative flex h-full w-[280px] shrink-0 flex-col rounded-xl border bg-surface/50 transition-shadow ${
-        overWip ? 'border-red-500/40 ring-1 ring-red-500/30' : isOver ? 'border-cyan/40' : 'border-edge'
+        isOver ? 'border-cyan/40' : 'border-edge'
       } ${isColumnDragging ? 'z-30 opacity-70 shadow-glow' : ''}`}
     >
       <header className="flex items-center gap-2 px-3 pb-1 pt-3">
@@ -214,20 +211,10 @@ export default function Column({ column, tasks, onCardClick }) {
           className={`h-2 w-2 rounded-full ${column.custom ? projectColor(column.color).dot : DOTS[column.id] || 'bg-slate-400'}`}
         />
         <h3 className="font-display text-sm font-semibold text-ink">{column.label}</h3>
-        <span
-          className={`rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
-            overWip ? 'bg-red-500/15 text-red-400' : 'bg-raised text-faint'
-          }`}
-        >
+        <span className="rounded-md bg-raised px-1.5 py-0.5 font-mono text-[11px] text-faint">
           {visibleTasks.length}
-          {isWipCol && wipLimit ? `/${wipLimit}` : ''}
         </span>
         <span className="ml-auto flex items-center gap-1">
-          {isWipCol && overWip && (
-            <span title="Límite WIP superado">
-              <AlertTriangle size={13} className="text-red-400" />
-            </span>
-          )}
           {isDoneCol && (
             <button
               onClick={() => setWeekOnly((w) => !w)}
@@ -248,7 +235,7 @@ export default function Column({ column, tasks, onCardClick }) {
           >
             <GripVertical size={13} />
           </button>
-          {isWipCol && (
+          {isProgressCol && (
             <button
               onClick={() => setSendingReview(true)}
               disabled={tasks.length === 0}
@@ -329,11 +316,6 @@ export default function Column({ column, tasks, onCardClick }) {
           </>
         )}
       </header>
-      {overWip && (
-        <p className="mx-3 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-400">
-          Límite WIP superado — termina algo antes de empezar más.
-        </p>
-      )}
       <SortableContext items={visibleTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} data-col-scroll className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
           {visibleTasks.length === 0 ? (

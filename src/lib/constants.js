@@ -73,8 +73,6 @@ export const IDEA_STATUSES = {
 
 export const IDEA_STATUS_ORDER = ['nueva', 'evaluacion', 'aprobada', 'descartada']
 
-export const DEFAULT_WIP_LIMIT = 5
-
 // Encabezado que se le pide a Claude para poder repartir su resumen final
 // entre las tarjetas correspondientes al pegarlo en "Enviar a revisión".
 export const REVIEW_NOTE_HEADING = '### Tarea:'

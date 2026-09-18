@@ -32,7 +32,7 @@ npm run deploy    # build + firebase deploy (hosting + reglas firestore)
 
 ### Modelo de datos (Firestore)
 
-- `users/{uid}` — `email, displayName, theme ('dark'|'light'), wipLimit (number|null), createdAt`
+- `users/{uid}` — `email, displayName, theme ('dark'|'light'), createdAt`
 - `users/{uid}/projects/{id}` — `name, color (clave de PROJECT_COLORS), createdAt`
 - `users/{uid}/tasks/{id}` — `title, description, column, order (float), tags[], priority (baja|media|alta|urgente), dueDate ('YYYY-MM-DD'|null), projectId (string|null), createdAt, updatedAt`
 - `users/{uid}/ideas/{id}` — `title, description, category ('nueva-app'|'mejora'), votes, status (nueva|evaluacion|aprobada|descartada), projectId (string|null), convertedTaskId, createdAt, updatedAt`

@@ -29,7 +29,6 @@ export function StoreProvider({ children }) {
 
   const [prefs, setPrefs] = useState({
     theme: 'dark',
-    wipLimit: null,
     exportPrompt: null,
     hiddenColumns: [],
     hiddenFilters: [],
@@ -52,7 +51,6 @@ export function StoreProvider({ children }) {
         if (d)
           setPrefs({
             theme: d.theme || 'dark',
-            wipLimit: d.wipLimit ?? null,
             exportPrompt: d.exportPrompt ?? null,
             hiddenColumns: d.hiddenColumns ?? [],
             hiddenFilters: d.hiddenFilters ?? [],
@@ -138,10 +136,6 @@ export function StoreProvider({ children }) {
       setTheme: (theme) => {
         setPrefs((p) => ({ ...p, theme }))
         updateDoc(userRef, { theme }).catch(fail)
-      },
-      setWipLimit: (wipLimit) => {
-        setPrefs((p) => ({ ...p, wipLimit }))
-        updateDoc(userRef, { wipLimit }).catch(fail)
       },
       setExportPrompt: (exportPrompt) => {
         setPrefs((p) => ({ ...p, exportPrompt }))
