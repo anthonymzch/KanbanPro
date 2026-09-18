@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { AlertTriangle, Inbox, Settings2 } from 'lucide-react'
+import { AlertTriangle, Check, Clipboard, Inbox, Settings2 } from 'lucide-react'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
 import { useStore } from '../../hooks/useStore'
+import { buildColumnExport } from '../../lib/exportTasks'
 
 const DOTS = {
   backlog: 'bg-slate-400',
@@ -51,13 +52,24 @@ function WipEditor({ wipLimit, onSave, onClose }) {
 }
 
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit } = useStore()
+  const { prefs, setWipLimit, projects } = useStore()
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const [editingWip, setEditingWip] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const isWipCol = column.id === 'inprogress'
   const wipLimit = prefs.wipLimit
   const overWip = isWipCol && wipLimit && tasks.length > wipLimit
+
+  const handleCopyColumn = async () => {
+    try {
+      await navigator.clipboard.writeText(buildColumnExport(column, tasks, projects))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard no disponible
+    }
+  }
 
   return (
     <section
@@ -76,14 +88,14 @@ export default function Column({ column, tasks, onCardClick }) {
           {tasks.length}
           {isWipCol && wipLimit ? `/${wipLimit}` : ''}
         </span>
-        {isWipCol && (
-          <span className="ml-auto flex items-center gap-1">
-            {overWip && (
-              <span title="Límite WIP superado">
-                <AlertTriangle size={13} className="text-red-400" />
-              </span>
-            )}
-            {editingWip ? (
+        <span className="ml-auto flex items-center gap-1">
+          {isWipCol && overWip && (
+            <span title="Límite WIP superado">
+              <AlertTriangle size={13} className="text-red-400" />
+            </span>
+          )}
+          {isWipCol &&
+            (editingWip ? (
               <WipEditor wipLimit={wipLimit} onSave={setWipLimit} onClose={() => setEditingWip(false)} />
             ) : (
               <button
@@ -93,9 +105,16 @@ export default function Column({ column, tasks, onCardClick }) {
               >
                 <Settings2 size={13} />
               </button>
-            )}
-          </span>
-        )}
+            ))}
+          <button
+            onClick={handleCopyColumn}
+            disabled={tasks.length === 0}
+            title="Copiar las tareas de esta columna para pegarlas en Claude"
+            className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:text-faint"
+          >
+            {copied ? <Check size={13} className="text-emerald-400" /> : <Clipboard size={13} />}
+          </button>
+        </span>
       </header>
       {overWip && (
         <p className="mx-3 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-400">
