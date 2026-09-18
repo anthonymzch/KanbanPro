@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { Lightbulb, LogOut, Settings2, SquareKanban } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
-import { projectColor } from '../../lib/constants'
+import { projectColor, projectStatus } from '../../lib/constants'
 
 function NavItem({ to, icon: Icon, children }) {
   return (
@@ -26,12 +28,69 @@ function NavItem({ to, icon: Icon, children }) {
   )
 }
 
+function DraggableProject({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 }}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  )
+}
+
+function DropZone({ id, label, count, empty, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div className={label ? 'mt-3' : ''}>
+      {label && (
+        <div className="flex items-center gap-1.5 px-3 pb-1">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-faint">{label}</span>
+          {count > 0 && <span className="font-mono text-[10px] text-faint">{count}</span>}
+        </div>
+      )}
+      <div
+        ref={setNodeRef}
+        className={`space-y-0.5 rounded-lg transition-colors ${isOver ? 'bg-raised/70 ring-1 ring-cyan/40' : ''}`}
+      >
+        {children}
+        {empty && (
+          <p className="rounded-lg border border-dashed border-edge px-3 py-2 text-[11px] text-faint">
+            Arrastra un proyecto aquí
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProjectRow({ p, count, selected, onSelect }) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+        selected ? 'bg-raised text-ink shadow-card' : 'text-muted hover:bg-raised/60 hover:text-ink'
+      }`}
+    >
+      <span className={`h-2 w-2 shrink-0 rounded-full ${projectColor(p.color).dot}`} />
+      <span className="flex-1 truncate text-left">{p.name}</span>
+      <span className="font-mono text-[10px] text-faint">{count || ''}</span>
+    </button>
+  )
+}
+
 function ProjectList() {
-  const { projects, tasks } = useStore()
+  const { projects, tasks, updateProject } = useStore()
   const { filters, setFilters, openProjects } = useUI()
   const navigate = useNavigate()
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
-  const activeProjects = projects.filter((p) => !p.archived)
+  const active = projects.filter((p) => projectStatus(p) === 'active')
+  const finished = projects.filter((p) => projectStatus(p) === 'finished')
+  const archived = projects.filter((p) => projectStatus(p) === 'archived')
   const count = (id) => tasks.filter((t) => t.projectId === id && t.column !== 'archived').length
 
   const select = (id) => {
@@ -42,40 +101,60 @@ function ProjectList() {
     navigate('/')
   }
 
+  const onDragEnd = ({ active: dragged, over }) => {
+    if (!over) return
+    const zone = over.id
+    if (zone !== 'active' && zone !== 'finished' && zone !== 'archived') return
+    const project = projects.find((p) => p.id === dragged.id)
+    if (project && projectStatus(project) !== zone) updateProject(project.id, { status: zone })
+  }
+
   return (
-    <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-3">
-      <div className="flex items-center justify-between px-3 pb-1">
-        <span className="font-mono text-[10px] tracking-widest text-faint">&lt;proyectos /&gt;</span>
-        <button
-          onClick={openProjects}
-          title="Gestionar proyectos"
-          className="rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
-        >
-          <Settings2 size={12} />
-        </button>
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-3">
+        <div className="flex items-center justify-between px-3 pb-1">
+          <span className="font-mono text-[10px] tracking-widest text-faint">&lt;proyectos /&gt;</span>
+          <button
+            onClick={openProjects}
+            title="Gestionar proyectos"
+            className="rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+          >
+            <Settings2 size={12} />
+          </button>
+        </div>
+        <DropZone id="active" label="" empty={false}>
+          {active.map((p) => (
+            <DraggableProject key={p.id} id={p.id}>
+              <ProjectRow p={p} count={count(p.id)} selected={filters.projects.includes(p.id)} onSelect={() => select(p.id)} />
+            </DraggableProject>
+          ))}
+          {active.length === 0 && (
+            <button
+              onClick={openProjects}
+              className="w-full rounded-lg border border-dashed border-edge px-3 py-2 text-xs text-faint transition-colors hover:border-cyan/40 hover:text-ink"
+            >
+              + Crear proyecto
+            </button>
+          )}
+        </DropZone>
+
+        <DropZone id="finished" label="Proyectos Finalizados" count={finished.length} empty={finished.length === 0}>
+          {finished.map((p) => (
+            <DraggableProject key={p.id} id={p.id}>
+              <ProjectRow p={p} count={count(p.id)} selected={filters.projects.includes(p.id)} onSelect={() => select(p.id)} />
+            </DraggableProject>
+          ))}
+        </DropZone>
+
+        <DropZone id="archived" label="Proyectos Archivados" count={archived.length} empty={archived.length === 0}>
+          {archived.map((p) => (
+            <DraggableProject key={p.id} id={p.id}>
+              <ProjectRow p={p} count={count(p.id)} selected={filters.projects.includes(p.id)} onSelect={() => select(p.id)} />
+            </DraggableProject>
+          ))}
+        </DropZone>
       </div>
-      {activeProjects.map((p) => (
-        <button
-          key={p.id}
-          onClick={() => select(p.id)}
-          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-            filters.projects.includes(p.id) ? 'bg-raised text-ink shadow-card' : 'text-muted hover:bg-raised/60 hover:text-ink'
-          }`}
-        >
-          <span className={`h-2 w-2 shrink-0 rounded-full ${projectColor(p.color).dot}`} />
-          <span className="flex-1 truncate text-left">{p.name}</span>
-          <span className="font-mono text-[10px] text-faint">{count(p.id) || ''}</span>
-        </button>
-      ))}
-      {activeProjects.length === 0 && (
-        <button
-          onClick={openProjects}
-          className="w-full rounded-lg border border-dashed border-edge px-3 py-2 text-xs text-faint transition-colors hover:border-cyan/40 hover:text-ink"
-        >
-          + Crear proyecto
-        </button>
-      )}
-    </div>
+    </DndContext>
   )
 }
 

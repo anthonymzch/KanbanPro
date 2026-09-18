@@ -6,7 +6,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import { ReviewControls } from './TaskCard'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
-import { PRIORITIES, PRIORITY_ORDER, tagColor } from '../../lib/constants'
+import { PRIORITIES, PRIORITY_ORDER, projectStatus, tagColor } from '../../lib/constants'
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
@@ -14,8 +14,8 @@ export default function TaskModal() {
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
   const isNew = !task
-  // No se puede asignar a un proyecto finalizado, salvo que la tarea ya lo tuviera
-  const selectableProjects = projects.filter((p) => !p.archived || p.id === task?.projectId)
+  // No se puede asignar a un proyecto finalizado/archivado, salvo que la tarea ya lo tuviera
+  const selectableProjects = projects.filter((p) => projectStatus(p) === 'active' || p.id === task?.projectId)
 
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
@@ -109,7 +109,7 @@ export default function TaskModal() {
                   {selectableProjects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
-                      {p.archived ? ' (finalizado)' : ''}
+                      {projectStatus(p) === 'finished' ? ' (finalizado)' : projectStatus(p) === 'archived' ? ' (archivado)' : ''}
                     </option>
                   ))}
                 </select>

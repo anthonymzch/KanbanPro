@@ -25,7 +25,7 @@ function ColorPicker({ value, onChange }) {
   )
 }
 
-function ColumnForm({ initial, saveLabel = 'Crear columna', onSave, onCancel }) {
+export function ColumnForm({ initial, saveLabel = 'Crear columna', onSave, onCancel }) {
   const [label, setLabel] = useState(initial?.label || '')
   const [color, setColor] = useState(initial?.color || 'violet')
 

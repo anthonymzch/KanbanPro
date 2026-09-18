@@ -54,6 +54,11 @@ export const PROJECT_COLOR_ORDER = Object.keys(PROJECT_COLORS)
 
 export const projectColor = (key) => PROJECT_COLORS[key] || PROJECT_COLORS.slate
 
+// Estado de un proyecto: 'active' (por defecto) | 'finished' | 'archived'.
+// Compatibilidad con datos antiguos: los proyectos creados antes de esta
+// versión solo tenían un booleano `archived`.
+export const projectStatus = (p) => p.status || (p.archived ? 'archived' : 'active')
+
 export const IDEA_CATEGORIES = {
   'nueva-app': { label: 'Nueva app', eyebrow: '<nueva-app />' },
   'mejora': { label: 'Mejora de app', eyebrow: '<mejora />' },

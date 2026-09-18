@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Search, Settings2, SlidersHorizontal, X } from 'lucide-react'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
-import { FILTER_DEFS, PRIORITIES, PRIORITY_ORDER } from '../../lib/constants'
+import { FILTER_DEFS, PRIORITIES, PRIORITY_ORDER, projectStatus } from '../../lib/constants'
 import { selectCls } from '../../lib/ui'
 import ProjectMultiSelect from './ProjectMultiSelect'
 
@@ -64,7 +64,7 @@ export default function FilterBar() {
   const { filters, setFilters, searchRef } = useUI()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const activeProjects = useMemo(() => projects.filter((p) => !p.archived), [projects])
+  const activeProjects = useMemo(() => projects.filter((p) => projectStatus(p) === 'active'), [projects])
   const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
   const hasFilters = filters.search || filters.priority || filters.tag || filters.projects.length > 0
   const hasExtraFilters = filters.priority || filters.tag || filters.projects.length > 0

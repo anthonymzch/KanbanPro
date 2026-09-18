@@ -1,9 +1,104 @@
+import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Columns3, Command, LogOut, Moon, Sun } from 'lucide-react'
+import { Columns3, Command, Eye, LogOut, Moon, Plus, Sun } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
 import FilterBar from '../board/FilterBar'
+import { ColumnForm } from '../board/ColumnsModal'
+import { COLUMNS, projectColor } from '../../lib/constants'
+
+function HiddenColumnsMenu() {
+  const { prefs, customColumns, setHiddenColumns } = useStore()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const hidden = prefs.hiddenColumns || []
+  const allColumns = [...COLUMNS, ...customColumns.map((c) => ({ ...c, custom: true }))]
+  const hiddenColumns = allColumns.filter((c) => hidden.includes(c.id))
+
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  const restore = (id) => setHiddenColumns(hidden.filter((h) => h !== id))
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={hiddenColumns.length === 0}
+        title={hiddenColumns.length ? `Mostrar columnas ocultas (${hiddenColumns.length})` : 'No hay columnas ocultas'}
+        className="relative mt-0.5 rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink disabled:pointer-events-none disabled:opacity-30"
+      >
+        <Eye size={14} />
+        {hiddenColumns.length > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-cyan text-[9px] font-bold text-[#0A0E16]">
+            {hiddenColumns.length}
+          </span>
+        )}
+      </button>
+      {open && hiddenColumns.length > 0 && (
+        <div className="absolute left-0 top-[calc(100%+4px)] z-30 min-w-[180px] rounded-lg border border-edge bg-surface p-1 shadow-card">
+          {hiddenColumns.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => restore(c.id)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink transition-colors hover:bg-raised"
+            >
+              <span className={`h-2 w-2 shrink-0 rounded-full ${c.custom ? projectColor(c.color).dot : 'bg-slate-400'}`} />
+              <span className="flex-1 truncate text-left">{c.label}</span>
+              <span className="text-[10px] text-faint">Mostrar</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function QuickAddColumn() {
+  const { addColumn } = useStore()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        title="Nueva columna"
+        className="mt-0.5 rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+      >
+        <Plus size={14} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+4px)] z-30 w-64 rounded-lg border border-edge bg-surface p-3 shadow-card">
+          <ColumnForm
+            onSave={(data) => {
+              addColumn(data)
+              setOpen(false)
+            }}
+            onCancel={() => setOpen(false)}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function TopBar() {
   const { pathname } = useLocation()
@@ -26,13 +121,17 @@ export default function TopBar() {
           </h2>
         </div>
         {isBoard && (
-          <button
-            onClick={openColumns}
-            title="Gestionar columnas"
-            className="mt-0.5 rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
-          >
-            <Columns3 size={14} />
-          </button>
+          <>
+            <button
+              onClick={openColumns}
+              title="Gestionar columnas"
+              className="mt-0.5 rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+            >
+              <Columns3 size={14} />
+            </button>
+            <HiddenColumnsMenu />
+            <QuickAddColumn />
+          </>
         )}
       </div>
 

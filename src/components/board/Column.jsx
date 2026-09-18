@@ -1,7 +1,18 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { AlertTriangle, Check, Clipboard, History, Inbox, MessageSquareText, Send, Settings2, Wrench } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  Clipboard,
+  Eye,
+  History,
+  Inbox,
+  MessageSquareText,
+  Send,
+  Settings2,
+  Wrench,
+} from 'lucide-react'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 import EmptyState from '../ui/EmptyState'
@@ -137,7 +148,7 @@ function SendToReviewEditor({ onSave, onClose }) {
 }
 
 export default function Column({ column, tasks, onCardClick }) {
-  const { prefs, setWipLimit, setExportPrompt, projects, sendToReview } = useStore()
+  const { prefs, setWipLimit, setHiddenColumns, setExportPrompt, projects, sendToReview } = useStore()
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const [editingWip, setEditingWip] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState(false)
@@ -166,6 +177,11 @@ export default function Column({ column, tasks, onCardClick }) {
     } catch {
       // clipboard no disponible
     }
+  }
+
+  const hideThisColumn = () => {
+    const hidden = prefs.hiddenColumns || []
+    if (!hidden.includes(column.id)) setHiddenColumns([...hidden, column.id])
   }
 
   const handleCopyCorrections = async () => {
@@ -260,6 +276,13 @@ export default function Column({ column, tasks, onCardClick }) {
             className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:text-faint"
           >
             {copied ? <Check size={13} className="text-emerald-400" /> : <Clipboard size={13} />}
+          </button>
+          <button
+            onClick={hideThisColumn}
+            title="Ocultar esta columna"
+            className="rounded p-1 text-faint opacity-60 transition-opacity hover:text-ink hover:opacity-100"
+          >
+            <Eye size={13} />
           </button>
         </span>
         {editingPrompt && (
