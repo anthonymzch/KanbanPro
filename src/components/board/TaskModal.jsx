@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Archive, ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
+import RichTextEditor from '../ui/RichTextEditor'
 import Badge from '../ui/Badge'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { ReviewControls } from './TaskCard'
@@ -9,10 +10,12 @@ import { useToast } from '../../hooks/useToast'
 import { useUI } from '../../hooks/useUI'
 import { PRIORITIES, PRIORITY_ORDER, projectStatus, tagColor } from '../../lib/constants'
 import { MAX_TASK_IMAGES, imagesFromClipboard } from '../../lib/images'
+import { extractImageUrls } from '../../lib/richText'
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask, addTaskImages, removeTaskImages, projects, tasks, columns } = useStore()
+  const { addTask, updateTask, deleteTask, addTaskImages, removeTaskImages, uploadInlineImage, deleteImagesByUrl, projects, tasks, columns } =
+    useStore()
   const toast = useToast()
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
@@ -41,6 +44,22 @@ export default function TaskModal() {
   const [newImages, setNewImages] = useState([]) // [{ id, file, preview }]
   const [dragOver, setDragOver] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Imágenes incrustadas en la descripción: las subidas en esta sesión se limpian si
+  // se cancela, o si se quitaron del texto antes de guardar
+  const [editorUploading, setEditorUploading] = useState(false)
+  const sessionUploads = useRef(new Set())
+  const savedRef = useRef(false)
+  const uploadInline = async (file) => {
+    const url = await uploadInlineImage(file)
+    if (url) sessionUploads.current.add(url)
+    return url
+  }
+  useEffect(
+    () => () => {
+      if (!savedRef.current) deleteImagesByUrl([...sessionUploads.current])
+    },
+    [deleteImagesByUrl],
+  )
   const fileRef = useRef(null)
   const newImagesRef = useRef(newImages)
   newImagesRef.current = newImages
@@ -105,6 +124,12 @@ export default function TaskModal() {
       subtasks: finalSubtasks,
       projectId: projectId || null,
     }
+    savedRef.current = true
+    const kept = new Set(extractImageUrls(data.description))
+    deleteImagesByUrl([
+      ...extractImageUrls(task?.description).filter((u) => !kept.has(u)),
+      ...[...sessionUploads.current].filter((u) => !kept.has(u)),
+    ])
     const id = isNew ? addTask(data) : task.id
     if (!isNew) updateTask(task.id, data)
     const removed = originalImages.filter((url) => !savedImages.includes(url))
@@ -124,6 +149,8 @@ export default function TaskModal() {
           className="space-y-4"
           onPaste={(e) => {
             // Pegar una captura (Ctrl+V) en cualquier punto del formulario la adjunta
+            // (menos en el editor de descripción, que la incrusta en el texto)
+            if (e.target.closest?.('[data-rich-editor]')) return
             const files = imagesFromClipboard(e)
             if (!files.length) return
             e.preventDefault()
@@ -137,12 +164,13 @@ export default function TaskModal() {
             placeholder="Título de la tarea"
             className={inputCls}
           />
-          <textarea
+          <RichTextEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            onUploadImage={uploadInline}
+            onUploadingChange={setEditorUploading}
             placeholder="Descripción (opcional)"
-            rows={5}
-            className={`${inputCls} resize-y`}
+            title={title.trim() || 'Nueva tarea'}
           />
           <div
             onDragOver={(e) => {
@@ -386,7 +414,7 @@ export default function TaskModal() {
               <button type="button" className={btnGhost} onClick={closeTaskModal}>
                 Cancelar
               </button>
-              <button type="submit" className={btnPrimary} disabled={!title.trim() || saving}>
+              <button type="submit" className={btnPrimary} disabled={!title.trim() || saving || editorUploading}>
                 {saving ? (
                   <span className="flex items-center gap-1.5">
                     <Loader2 size={14} className="animate-spin" /> Subiendo…

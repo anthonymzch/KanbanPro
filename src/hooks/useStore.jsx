@@ -19,6 +19,7 @@ import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'fi
 import { db, storage } from '../lib/firebase'
 import { COLUMNS } from '../lib/constants'
 import { prepareImage } from '../lib/images'
+import { extractImageUrls } from '../lib/richText'
 import { useAuth } from './useAuth'
 import { useToast } from './useToast'
 
@@ -221,7 +222,7 @@ export function StoreProvider({ children }) {
         const t = tasks.find((x) => x.id === id)
         deleteDoc(doc(tasksCol, id)).catch(fail)
         // Limpia sus capturas del Storage (mejor esfuerzo: si falla no bloquea el borrado)
-        ;[...(t?.images || []), ...(t?.correctionImages || [])].forEach((url) =>
+        ;[...(t?.images || []), ...(t?.correctionImages || []), ...extractImageUrls(t?.description)].forEach((url) =>
           deleteObject(storageRef(storage, url)).catch(() => {})
         )
         toast('Tarea eliminada')
@@ -277,6 +278,23 @@ export function StoreProvider({ children }) {
           fail(err)
           return false
         }
+      },
+      // Sube una imagen para incrustarla en una descripción (devuelve su URL, o null si falla)
+      uploadInlineImage: async (file) => {
+        try {
+          const prepared = await prepareImage(file)
+          const ext = (prepared.type.split('/')[1] || 'png').replace('jpeg', 'jpg')
+          const fileRef = storageRef(storage, `users/${uid}/inline/${crypto.randomUUID()}.${ext}`)
+          await uploadBytes(fileRef, prepared, { contentType: prepared.type })
+          return await getDownloadURL(fileRef)
+        } catch (err) {
+          fail(err)
+          return null
+        }
+      },
+      // Borra archivos de Storage por URL (mejor esfuerzo)
+      deleteImagesByUrl: (urls) => {
+        urls.forEach((url) => deleteObject(storageRef(storage, url)).catch(() => {}))
       },
       addCorrectionImage: (taskId, file) => value.addTaskImages(taskId, [file], 'correctionImages'),
       removeCorrectionImage: (taskId, url) => value.removeTaskImages(taskId, [url], 'correctionImages'),

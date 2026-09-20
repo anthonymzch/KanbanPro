@@ -1,4 +1,5 @@
 import { DEFAULT_EXPORT_PROMPT, PRIORITIES } from './constants'
+import { extractImageUrls } from './richText'
 
 const SEPARATOR = `\n\n${'─'.repeat(40)}\n\n`
 
@@ -34,8 +35,8 @@ export function buildColumnExport(column, tasks, projects = [], instructions = D
     `Exportado: ${stamp}`,
     '',
     `Instrucciones: ${(instructions || DEFAULT_EXPORT_PROMPT).trim()}`,
-    ...(tasks.some((t) => (t.images || []).length > 0)
-      ? ['Algunas tareas traen capturas de pantalla para entender mejor lo que se pide: ábrelas desde el enlace, o pégalas aquí en el chat si hace falta.']
+    ...(tasks.some((t) => (t.images || []).length > 0 || extractImageUrls(t.description).length > 0)
+      ? ['Algunas tareas traen capturas de pantalla (adjuntas o incrustadas en la descripción como ![](enlace)) para entender mejor lo que se pide: ábrelas desde el enlace, o pégalas aquí en el chat si hace falta.']
       : []),
   ].join('\n')
 

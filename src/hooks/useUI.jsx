@@ -96,6 +96,8 @@ export function UIProvider({ children }) {
         return
       }
       if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b') {
+        // Dentro de un campo editable Ctrl+B es negrita (editor de descripción)
+        if (e.target.isContentEditable || e.target.tagName === 'TEXTAREA') return
         e.preventDefault()
         setSidebarCollapsed((c) => !c)
         return

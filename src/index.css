@@ -77,3 +77,132 @@ input[type='date']::-webkit-calendar-picker-indicator {
 :root:not(.dark) input[type='date']::-webkit-calendar-picker-indicator {
   filter: none;
 }
+
+/* Editor de texto enriquecido (descripción de tareas) */
+.rt-prose {
+  outline: none;
+  min-height: 5.5rem;
+  color: rgb(var(--c-ink));
+  font-size: 0.875rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.rt-page .rt-prose {
+  min-height: 40vh;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.rt-prose > * + * {
+  margin-top: 0.65em;
+}
+.rt-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgb(var(--c-faint));
+}
+.rt-prose h1,
+.rt-prose h2,
+.rt-prose h3 {
+  font-family: 'Space Grotesk', ui-sans-serif, sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.1em;
+}
+.rt-prose h1 {
+  font-size: 1.6em;
+}
+.rt-prose h2 {
+  font-size: 1.3em;
+}
+.rt-prose h3 {
+  font-size: 1.1em;
+}
+.rt-prose ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.rt-prose ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.rt-prose li > p {
+  margin: 0;
+}
+.rt-prose li + li {
+  margin-top: 0.2em;
+}
+.rt-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+.rt-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55em;
+}
+.rt-prose ul[data-type='taskList'] li > label {
+  flex-shrink: 0;
+  margin-top: 0.3em;
+}
+.rt-prose ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.rt-prose ul[data-type='taskList'] input[type='checkbox'] {
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+.rt-prose ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: rgb(var(--c-faint));
+  text-decoration: line-through;
+}
+.rt-prose blockquote {
+  border-left: 3px solid rgb(34 211 238 / 0.6);
+  padding-left: 1em;
+  color: rgb(var(--c-muted));
+}
+.rt-prose code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.88em;
+  background: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-edge));
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+.rt-prose pre {
+  background: rgb(var(--c-base));
+  border: 1px solid rgb(var(--c-edge));
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+}
+.rt-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.rt-prose hr {
+  border: 0;
+  border-top: 1px solid rgb(var(--c-edge));
+  margin: 1.2em 0;
+}
+.rt-prose a {
+  color: #22d3ee;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.rt-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid rgb(var(--c-edge));
+  margin: 0.6em 0;
+}
+.rt-prose img.ProseMirror-selectednode {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
