@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, Check, CheckCircle2, Copy, ListChecks, Loader2, Paperclip, X, XCircle } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, Copy, ImageIcon, ListChecks, Loader2, Paperclip, X, XCircle } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
@@ -12,6 +12,9 @@ function taskToText(task) {
   if (task.description?.trim()) parts.push(task.description.trim())
   if ((task.subtasks || []).length) {
     parts.push(task.subtasks.map((s) => `- [${s.done ? 'x' : ' '}] ${s.title}`).join('\n'))
+  }
+  if ((task.images || []).length) {
+    parts.push(`Capturas de pantalla (${task.images.length}):\n${task.images.map((url, i) => `${i + 1}. ${url}`).join('\n')}`)
   }
   return parts.join('\n\n')
 }
@@ -236,6 +239,12 @@ export function CardBody({ task, overlay = false }) {
           >
             <ListChecks size={11} />
             {subtasksDone}/{subtasks.length}
+          </Badge>
+        )}
+        {(task.images || []).length > 0 && (
+          <Badge className="border-edge bg-raised text-faint" title="Capturas de pantalla adjuntas">
+            <ImageIcon size={11} />
+            {task.images.length}
           </Badge>
         )}
         {!overlay && (

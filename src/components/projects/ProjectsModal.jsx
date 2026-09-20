@@ -118,9 +118,9 @@ function ProjectRow({ p, taskCount, onFinish, onArchive, onReactivate, onEdit, o
 
 export default function ProjectsModal() {
   const { projects, tasks, addProject, updateProject, deleteProject } = useStore()
-  const { closeProjects } = useUI()
+  const { projectsOpen, closeProjects } = useUI()
   const [editingId, setEditingId] = useState(null)
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(projectsOpen === 'new')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [showInactive, setShowInactive] = useState(false)
 

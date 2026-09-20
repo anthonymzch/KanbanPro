@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Columns3, Command, Eye, LogOut, Moon, Plus, Sun } from 'lucide-react'
+import { Columns3, Command, Eye, LogOut, Moon, PanelLeftOpen, Plus, Sun } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
@@ -103,7 +103,7 @@ function QuickAddColumn() {
 export default function TopBar() {
   const { pathname } = useLocation()
   const { prefs, setTheme } = useStore()
-  const { setPaletteOpen, openColumns } = useUI()
+  const { setPaletteOpen, openColumns, sidebarCollapsed, toggleSidebar } = useUI()
   const { logout } = useAuth()
   const isBoard = pathname === '/'
   const dark = prefs.theme !== 'light'
@@ -114,6 +114,16 @@ export default function TopBar() {
         <span className="grad-text font-display text-base font-bold">KanbanPro</span>
       </div>
       <div className="hidden items-start gap-1.5 md:flex">
+        {sidebarCollapsed && (
+          <button
+            onClick={toggleSidebar}
+            title="Mostrar barra lateral (Ctrl+B)"
+            aria-label="Mostrar barra lateral"
+            className="-ml-1.5 mr-1 mt-0.5 rounded-md p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
         <div>
           <span className="eyebrow">{isBoard ? '<tablero />' : '<ideas />'}</span>
           <h2 className="font-display text-base font-semibold leading-tight text-ink">

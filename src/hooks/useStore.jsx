@@ -11,12 +11,14 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { db, storage } from '../lib/firebase'
 import { COLUMNS } from '../lib/constants'
+import { prepareImage } from '../lib/images'
 import { useAuth } from './useAuth'
 import { useToast } from './useToast'
 
@@ -194,7 +196,8 @@ export function StoreProvider({ children }) {
         dueDate = null,
         projectId = null,
       }) => {
-        addDoc(tasksCol, {
+        const taskRef = doc(tasksCol)
+        setDoc(taskRef, {
           title,
           description,
           column,
@@ -208,13 +211,19 @@ export function StoreProvider({ children }) {
           updatedAt: serverTimestamp(),
         }).catch(fail)
         toast('Tarea creada')
+        return taskRef.id
       },
       updateTask: (id, patch, { silent = false } = {}) => {
         updateDoc(doc(tasksCol, id), { ...patch, updatedAt: serverTimestamp() }).catch(fail)
         if (!silent) toast('Tarea actualizada')
       },
       deleteTask: (id) => {
+        const t = tasks.find((x) => x.id === id)
         deleteDoc(doc(tasksCol, id)).catch(fail)
+        // Limpia sus capturas del Storage (mejor esfuerzo: si falla no bloquea el borrado)
+        ;[...(t?.images || []), ...(t?.correctionImages || [])].forEach((url) =>
+          deleteObject(storageRef(storage, url)).catch(() => {})
+        )
         toast('Tarea eliminada')
       },
       moveTask: (id, column, order) => {
@@ -237,27 +246,40 @@ export function StoreProvider({ children }) {
         batch.commit().catch(fail)
         toast(`${items.length} ${items.length === 1 ? 'tarea enviada' : 'tareas enviadas'} a revisión`)
       },
-      // Sube una captura de pantalla y la adjunta a la corrección de la tarea
-      addCorrectionImage: async (taskId, file) => {
+      // Sube capturas de pantalla y las adjunta a un campo de imágenes de la tarea:
+      // 'images' (contexto de la tarjeta) o 'correctionImages' (correcciones de Revisión).
+      // Todo o nada: si alguna subida falla no se guarda ninguna URL.
+      addTaskImages: async (taskId, files, field = 'images') => {
         try {
-          const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')
-          const path = `users/${uid}/tasks/${taskId}/corrections/${crypto.randomUUID()}.${ext}`
-          const fileRef = storageRef(storage, path)
-          await uploadBytes(fileRef, file, { contentType: file.type })
-          const url = await getDownloadURL(fileRef)
-          await updateDoc(doc(tasksCol, taskId), { correctionImages: arrayUnion(url), updatedAt: serverTimestamp() })
+          const folder = field === 'images' ? 'images' : 'corrections'
+          const urls = await Promise.all(
+            files.map(async (original) => {
+              const file = await prepareImage(original)
+              const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')
+              const fileRef = storageRef(storage, `users/${uid}/tasks/${taskId}/${folder}/${crypto.randomUUID()}.${ext}`)
+              await uploadBytes(fileRef, file, { contentType: file.type })
+              return getDownloadURL(fileRef)
+            })
+          )
+          await updateDoc(doc(tasksCol, taskId), { [field]: arrayUnion(...urls), updatedAt: serverTimestamp() })
+          return true
         } catch (err) {
           fail(err)
+          return false
         }
       },
-      removeCorrectionImage: async (taskId, url) => {
+      removeTaskImages: async (taskId, urls, field = 'images') => {
         try {
-          await updateDoc(doc(tasksCol, taskId), { correctionImages: arrayRemove(url), updatedAt: serverTimestamp() })
-          await deleteObject(storageRef(storage, url))
+          await updateDoc(doc(tasksCol, taskId), { [field]: arrayRemove(...urls), updatedAt: serverTimestamp() })
+          await Promise.all(urls.map((url) => deleteObject(storageRef(storage, url)).catch(() => {})))
+          return true
         } catch (err) {
           fail(err)
+          return false
         }
       },
+      addCorrectionImage: (taskId, file) => value.addTaskImages(taskId, [file], 'correctionImages'),
+      removeCorrectionImage: (taskId, url) => value.removeTaskImages(taskId, [url], 'correctionImages'),
 
       addIdea: ({ title, description = '', category = 'nueva-app', projectId = null }) => {
         addDoc(ideasCol, {

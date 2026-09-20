@@ -19,6 +19,11 @@ function taskBlock(task, index, total, project) {
     lines.push('', 'Subtareas:', ...subtasks.map((s) => `- [${s.done ? 'x' : ' '}] ${s.title}`))
   }
 
+  const images = task.images || []
+  if (images.length) {
+    lines.push('', `Capturas de pantalla (${images.length}):`, ...images.map((url, i) => `${i + 1}. ${url}`))
+  }
+
   return lines.join('\n')
 }
 
@@ -29,6 +34,9 @@ export function buildColumnExport(column, tasks, projects = [], instructions = D
     `Exportado: ${stamp}`,
     '',
     `Instrucciones: ${(instructions || DEFAULT_EXPORT_PROMPT).trim()}`,
+    ...(tasks.some((t) => (t.images || []).length > 0)
+      ? ['Algunas tareas traen capturas de pantalla para entender mejor lo que se pide: ábrelas desde el enlace, o pégalas aquí en el chat si hace falta.']
+      : []),
   ].join('\n')
 
   if (!tasks.length) return `${header}\n\n(La columna está vacía.)\n`

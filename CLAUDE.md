@@ -34,7 +34,7 @@ npm run deploy    # build + firebase deploy (hosting + reglas firestore)
 
 - `users/{uid}` — `email, displayName, theme ('dark'|'light'), createdAt`
 - `users/{uid}/projects/{id}` — `name, color (clave de PROJECT_COLORS), createdAt`
-- `users/{uid}/tasks/{id}` — `title, description, column, order (float), tags[], priority (baja|media|alta|urgente), dueDate ('YYYY-MM-DD'|null), projectId (string|null), createdAt, updatedAt`
+- `users/{uid}/tasks/{id}` — `title, description, column, order (float), tags[], priority (baja|media|alta|urgente), dueDate ('YYYY-MM-DD'|null), projectId (string|null), images[] (URLs de capturas de contexto), correctionImages[] (capturas de correcciones en Revisión), createdAt, updatedAt`
 - `users/{uid}/ideas/{id}` — `title, description, category ('nueva-app'|'mejora'), votes, status (nueva|evaluacion|aprobada|descartada), projectId (string|null), convertedTaskId, createdAt, updatedAt`
 
 ### Decisiones clave
@@ -43,6 +43,8 @@ npm run deploy    # build + firebase deploy (hosting + reglas firestore)
 - **Drag & drop**: `BoardPage` mantiene una copia local `cols` (mapa columna→ids) que se muta en `onDragOver` para animar entre columnas y se persiste en `onDragEnd`. Se reconstruye desde el snapshot cuando no hay drag activo.
 - **Filtros** (búsqueda/prioridad/etiqueta) se aplican en cliente sobre el snapshot en memoria.
 - Convertir idea → tarea usa un `writeBatch` atómico (crea task en Backlog + marca `convertedTaskId`); hereda el `projectId` de la idea.
+- **Capturas por tarjeta**: `TaskModal` permite adjuntar hasta 10 imágenes (botón, Ctrl+V o arrastrar). Los cambios quedan en estado local hasta pulsar Guardar; `addTaskImages`/`removeTaskImages` (useStore) suben a Firebase Storage (`users/{uid}/tasks/{id}/images/`, reglas en `storage.rules`), reescalan con `lib/images.js` si pesan >1 MB y guardan las URLs con `arrayUnion`/`arrayRemove`. Las URLs salen en el export de columna y en "copiar tarjeta" para que el prompt para Claude las incluya. `deleteTask` borra también los archivos.
+- **Sidebar plegable**: `sidebarCollapsed` en `useUI` (persistido en localStorage, atajo Ctrl/Cmd+B); botón en el sidebar para esconderlo y en `TopBar` para volver a mostrarlo.
 - **Proyectos**: agrupan tarjetas (franja + chip de color en la tarjeta, lista clicable en el sidebar que filtra el tablero, select en filtros/modales, gestión CRUD en `ProjectsModal`). Borrar un proyecto desasigna sus tareas/ideas en batch, no las borra. QuickAdd y el modal de tarea nueva heredan el proyecto del filtro activo.
 
 ## Diseño

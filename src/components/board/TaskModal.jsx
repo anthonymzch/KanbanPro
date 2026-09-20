@@ -1,16 +1,19 @@
-import { useMemo, useState } from 'react'
-import { Archive, Plus, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Archive, ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Badge from '../ui/Badge'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { ReviewControls } from './TaskCard'
 import { useStore } from '../../hooks/useStore'
+import { useToast } from '../../hooks/useToast'
 import { useUI } from '../../hooks/useUI'
 import { PRIORITIES, PRIORITY_ORDER, projectStatus, tagColor } from '../../lib/constants'
+import { MAX_TASK_IMAGES, imagesFromClipboard } from '../../lib/images'
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask, projects, tasks, columns } = useStore()
+  const { addTask, updateTask, deleteTask, addTaskImages, removeTaskImages, projects, tasks, columns } = useStore()
+  const toast = useToast()
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
   const task = taskModal.task
   const isNew = !task
@@ -31,6 +34,37 @@ export default function TaskModal() {
   const [subtasks, setSubtasks] = useState(task?.subtasks || [])
   const [subtaskInput, setSubtaskInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Capturas: las ya guardadas (URLs) y las nuevas pendientes de subir. Nada se
+  // sube ni se borra hasta pulsar Guardar, así "Cancelar" descarta los cambios.
+  const originalImages = useMemo(() => task?.images || [], [task])
+  const [savedImages, setSavedImages] = useState(originalImages)
+  const [newImages, setNewImages] = useState([]) // [{ id, file, preview }]
+  const [dragOver, setDragOver] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const fileRef = useRef(null)
+  const newImagesRef = useRef(newImages)
+  newImagesRef.current = newImages
+  const totalImages = savedImages.length + newImages.length
+
+  // Libera las URLs de vista previa al cerrar el modal
+  useEffect(() => () => newImagesRef.current.forEach((i) => URL.revokeObjectURL(i.preview)), [])
+
+  const addImageFiles = (fileList) => {
+    const files = [...fileList].filter((f) => f.type.startsWith('image/'))
+    if (!files.length) return
+    const room = Math.max(MAX_TASK_IMAGES - totalImages, 0)
+    if (files.length > room) toast(`Máximo ${MAX_TASK_IMAGES} capturas por tarjeta`, 'info')
+    setNewImages((prev) => [
+      ...prev,
+      ...files.slice(0, room).map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) })),
+    ])
+  }
+  const removeNewImage = (id) =>
+    setNewImages((prev) => {
+      const img = prev.find((i) => i.id === id)
+      if (img) URL.revokeObjectURL(img.preview)
+      return prev.filter((i) => i.id !== id)
+    })
 
   const existingTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
   const tagSuggestions = useMemo(() => {
@@ -53,10 +87,10 @@ export default function TaskModal() {
   const toggleSubtask = (id) => setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, done: !s.done } : s)))
   const removeSubtask = (id) => setSubtasks((prev) => prev.filter((s) => s.id !== id))
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     const t = title.trim()
-    if (!t) return
+    if (!t || saving) return
     const finalTags = tagInput.trim() ? [...tags, tagInput.trim().toLowerCase()].filter((v, i, a) => a.indexOf(v) === i) : tags
     const finalSubtasks = subtaskInput.trim()
       ? [...subtasks, { id: crypto.randomUUID(), title: subtaskInput.trim(), done: false }]
@@ -71,15 +105,31 @@ export default function TaskModal() {
       subtasks: finalSubtasks,
       projectId: projectId || null,
     }
-    if (isNew) addTask(data)
-    else updateTask(task.id, data)
+    const id = isNew ? addTask(data) : task.id
+    if (!isNew) updateTask(task.id, data)
+    const removed = originalImages.filter((url) => !savedImages.includes(url))
+    if (newImages.length || removed.length) {
+      setSaving(true)
+      if (removed.length) await removeTaskImages(id, removed)
+      if (newImages.length) await addTaskImages(id, newImages.map((i) => i.file))
+    }
     closeTaskModal()
   }
 
   return (
     <>
       <Modal onClose={closeTaskModal} eyebrow="<tarea />" title={isNew ? 'Nueva tarea' : 'Editar tarea'} wide>
-        <form onSubmit={submit} className="space-y-4">
+        <form
+          onSubmit={submit}
+          className="space-y-4"
+          onPaste={(e) => {
+            // Pegar una captura (Ctrl+V) en cualquier punto del formulario la adjunta
+            const files = imagesFromClipboard(e)
+            if (!files.length) return
+            e.preventDefault()
+            addImageFiles(files)
+          }}
+        >
           <input
             autoFocus
             value={title}
@@ -94,6 +144,84 @@ export default function TaskModal() {
             rows={5}
             className={`${inputCls} resize-y`}
           />
+          <div
+            onDragOver={(e) => {
+              if (![...e.dataTransfer.types].includes('Files')) return
+              e.preventDefault()
+              setDragOver(true)
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDragOver(false)
+              addImageFiles(e.dataTransfer.files)
+            }}
+          >
+            <span className="mb-1 block font-mono text-[11px] text-faint">capturas de pantalla</span>
+            <div
+              className={`rounded-lg border border-dashed p-2 transition-colors ${
+                dragOver ? 'border-cyan/60 bg-cyan/5' : 'border-edge bg-raised'
+              }`}
+            >
+              {totalImages > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {savedImages.map((url) => (
+                    <div key={url} className="group/img relative h-20 w-20 overflow-hidden rounded-md border border-edge">
+                      <a href={url} target="_blank" rel="noreferrer" title="Abrir en pestaña nueva (clic derecho para copiar la imagen)">
+                        <img src={url} alt="Captura de pantalla" className="h-full w-full object-cover" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setSavedImages((prev) => prev.filter((u) => u !== url))}
+                        title="Quitar captura"
+                        className="absolute right-0 top-0 rounded-bl-md bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover/img:opacity-100 focus:opacity-100"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {newImages.map((img) => (
+                    <div key={img.id} className="group/img relative h-20 w-20 overflow-hidden rounded-md border border-cyan/40">
+                      <img src={img.preview} alt="Captura nueva" className="h-full w-full object-cover" />
+                      <span className="absolute bottom-0 left-0 rounded-tr-md bg-cyan px-1 font-mono text-[9px] font-bold text-[#0A0E16]">
+                        nueva
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(img.id)}
+                        title="Quitar captura"
+                        className="absolute right-0 top-0 rounded-bl-md bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover/img:opacity-100 focus:opacity-100"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  addImageFiles(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={totalImages >= MAX_TASK_IMAGES}
+                className="flex items-center gap-1.5 rounded-md px-1 py-1 text-xs text-faint transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+              >
+                <ImagePlus size={13} /> Adjuntar captura
+              </button>
+              <p className="px-1 text-[11px] text-faint">
+                Opcional. Pega con Ctrl+V o arrastra imágenes aquí para explicar mejor la tarea.
+              </p>
+            </div>
+          </div>
           {!isNew && task?.reviewNote && (
             <div>
               <span className="mb-1 block font-mono text-[11px] text-faint">revisión</span>
@@ -258,8 +386,16 @@ export default function TaskModal() {
               <button type="button" className={btnGhost} onClick={closeTaskModal}>
                 Cancelar
               </button>
-              <button type="submit" className={btnPrimary} disabled={!title.trim()}>
-                {isNew ? 'Crear tarea' : 'Guardar'}
+              <button type="submit" className={btnPrimary} disabled={!title.trim() || saving}>
+                {saving ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={14} className="animate-spin" /> Subiendo…
+                  </span>
+                ) : isNew ? (
+                  'Crear tarea'
+                ) : (
+                  'Guardar'
+                )}
               </button>
             </div>
           </div>

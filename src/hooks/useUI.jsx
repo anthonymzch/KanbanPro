@@ -5,6 +5,16 @@ const UIContext = createContext(null)
 
 const PROJECT_FILTER_KEY = 'kanbanpro:lastProjectFilter'
 
+const SIDEBAR_KEY = 'kanbanpro:sidebarCollapsed'
+
+function loadSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 function loadStoredProjectFilter() {
   try {
     const raw = localStorage.getItem(PROJECT_FILTER_KEY)
@@ -24,8 +34,18 @@ export function UIProvider({ children }) {
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [filters, setFilters] = useState({ search: '', priority: '', tag: '', projects: loadStoredProjectFilter() })
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed)
   const searchRef = useRef(null)
   const navigate = useNavigate()
+
+  // Recuerda si el sidebar estaba escondido entre recargas
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? '1' : '0')
+    } catch {
+      // localStorage no disponible
+    }
+  }, [sidebarCollapsed])
 
   // Recuerda el último proyecto (o proyectos) filtrado entre recargas
   useEffect(() => {
@@ -45,9 +65,13 @@ export function UIProvider({ children }) {
       columnsOpen,
       filters,
       searchRef,
+      sidebarCollapsed,
+      toggleSidebar: () => setSidebarCollapsed((c) => !c),
       setFilters,
       setPaletteOpen,
+      // projectsOpen: false | true (gestionar) | 'new' (abre ya el formulario de nuevo proyecto)
       openProjects: () => setProjectsOpen(true),
+      openNewProject: () => setProjectsOpen('new'),
       closeProjects: () => setProjectsOpen(false),
       openColumns: () => setColumnsOpen(true),
       closeColumns: () => setColumnsOpen(false),
@@ -60,7 +84,7 @@ export function UIProvider({ children }) {
         setTimeout(() => searchRef.current?.focus(), 60)
       },
     }),
-    [taskModal, ideaModal, paletteOpen, projectsOpen, columnsOpen, filters, navigate],
+    [taskModal, ideaModal, paletteOpen, projectsOpen, columnsOpen, filters, sidebarCollapsed, navigate],
   )
 
   // Atajos globales: N tarea, I idea, / buscar, Cmd/Ctrl+K paleta
@@ -69,6 +93,11 @@ export function UIProvider({ children }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen((o) => !o)
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        setSidebarCollapsed((c) => !c)
         return
       }
       const t = e.target

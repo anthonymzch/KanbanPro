@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronRight, Lightbulb, LogOut, Settings2, SquareKanban } from 'lucide-react'
+import { ChevronRight, Lightbulb, LogOut, PanelLeftClose, Plus, Settings2, SquareKanban } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useStore } from '../../hooks/useStore'
 import { useUI } from '../../hooks/useUI'
@@ -99,7 +99,7 @@ function ProjectRow({ p, count, selected, onSelect }) {
 
 function ProjectList() {
   const { projects, tasks, updateProject } = useStore()
-  const { filters, setFilters, openProjects } = useUI()
+  const { filters, setFilters, openProjects, openNewProject } = useUI()
   const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -129,13 +129,24 @@ function ProjectList() {
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-3">
         <div className="flex items-center justify-between px-3 pb-1">
           <span className="font-mono text-[10px] tracking-widest text-faint">&lt;proyectos /&gt;</span>
-          <button
-            onClick={openProjects}
-            title="Gestionar proyectos"
-            className="rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
-          >
-            <Settings2 size={12} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={openNewProject}
+              title="Nuevo proyecto"
+              aria-label="Nuevo proyecto"
+              className="rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+            >
+              <Plus size={13} />
+            </button>
+            <button
+              onClick={openProjects}
+              title="Gestionar proyectos"
+              aria-label="Gestionar proyectos"
+              className="rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+            >
+              <Settings2 size={12} />
+            </button>
+          </div>
         </div>
         <DropZone id="active" label="" empty={false}>
           {active.map((p) => (
@@ -187,13 +198,33 @@ function ProjectList() {
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
+  const { sidebarCollapsed, toggleSidebar } = useUI()
   const initial = (user.displayName || user.email || '?')[0].toUpperCase()
 
+  // Escondido: el ancho baja a 0 y el contenido interior conserva su ancho (w-60)
+  // para que no se re-maquete durante la animación. `invisible` (con transición de
+  // visibilidad) lo saca además del foco de teclado.
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-edge bg-surface md:flex">
-      <div className="px-5 pb-5 pt-6">
-        <span className="eyebrow">&lt;kanbanpro /&gt;</span>
-        <h1 className="grad-text font-display text-xl font-bold leading-tight">KanbanPro</h1>
+    <aside
+      className={`hidden shrink-0 overflow-hidden bg-surface transition-[width,visibility] duration-200 md:block ${
+        sidebarCollapsed ? 'invisible w-0' : 'w-60 border-r border-edge'
+      }`}
+      aria-hidden={sidebarCollapsed}
+    >
+      <div className="flex h-full w-60 flex-col">
+      <div className="flex items-start justify-between px-5 pb-5 pt-6">
+        <div>
+          <span className="eyebrow">&lt;kanbanpro /&gt;</span>
+          <h1 className="grad-text font-display text-xl font-bold leading-tight">KanbanPro</h1>
+        </div>
+        <button
+          onClick={toggleSidebar}
+          title="Esconder barra lateral (Ctrl+B)"
+          aria-label="Esconder barra lateral"
+          className="-mr-2 mt-0.5 rounded-md p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
+        >
+          <PanelLeftClose size={16} />
+        </button>
       </div>
       <nav className="flex flex-col gap-1 px-3">
         <NavItem to="/" icon={SquareKanban}>
@@ -223,6 +254,7 @@ export default function Sidebar() {
         >
           <LogOut size={15} />
         </button>
+      </div>
       </div>
     </aside>
   )
