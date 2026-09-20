@@ -10,6 +10,8 @@ export default function QuickAdd({ column }) {
   const [value, setValue] = useState('')
   // Título pendiente de elegir proyecto cuando hay 2+ proyectos filtrados
   const [pendingTitle, setPendingTitle] = useState(null)
+  // Dentro de esa pregunta: "Otro" muestra los proyectos que no están en el filtro
+  const [pickingOther, setPickingOther] = useState(false)
   // Clic directo en el "+": elegir proyecto antes de escribir el título
   const [pickingProject, setPickingProject] = useState(false)
   // undefined = sin elegir explícitamente (se usa el filtro activo); null = "sin proyecto" elegido a propósito
@@ -17,6 +19,7 @@ export default function QuickAdd({ column }) {
 
   const activeProjects = projects.filter((p) => projectStatus(p) === 'active')
   const filteredProjects = filters.projects.map((id) => projects.find((p) => p.id === id)).filter(Boolean)
+  const otherProjects = activeProjects.filter((p) => !filters.projects.includes(p.id))
   const chosenProject = chosenProjectId ? activeProjects.find((p) => p.id === chosenProjectId) : null
 
   const reset = () => {
@@ -27,6 +30,7 @@ export default function QuickAdd({ column }) {
   const create = (projectId) => {
     addTask({ title: pendingTitle, column, projectId })
     setPendingTitle(null)
+    setPickingOther(false)
     reset()
   }
 
@@ -50,30 +54,49 @@ export default function QuickAdd({ column }) {
   }
 
   if (pendingTitle) {
+    const chip =
+      'flex items-center gap-1.5 rounded-md border border-edge bg-raised px-2 py-1 text-[11px] text-ink transition-colors hover:border-cyan/40'
+    const options = pickingOther ? otherProjects : filteredProjects
     return (
       <div className="p-2 pt-1">
         <p className="mb-1.5 truncate px-1 text-xs text-muted">
-          <span className="font-medium text-ink">{pendingTitle}</span> — ¿en qué proyecto?
+          <span className="font-medium text-ink">{pendingTitle}</span> —{' '}
+          {pickingOther ? 'elige otro proyecto' : '¿en qué proyecto?'}
         </p>
         <div className="flex flex-wrap gap-1.5">
-          {filteredProjects.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => create(p.id)}
-              className="flex items-center gap-1.5 rounded-md border border-edge bg-raised px-2 py-1 text-[11px] text-ink transition-colors hover:border-cyan/40"
-            >
+          {options.map((p) => (
+            <button key={p.id} type="button" onClick={() => create(p.id)} className={chip}>
               <span className={`h-1.5 w-1.5 rounded-full ${projectColor(p.color).dot}`} />
               {p.name}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setPendingTitle(null)}
-            className="rounded-md px-2 py-1 text-[11px] text-faint hover:text-ink"
-          >
-            Cancelar
-          </button>
+          {pickingOther ? (
+            <>
+              <button type="button" onClick={() => create(null)} className={`${chip} text-faint`}>
+                Sin proyecto
+              </button>
+              <button
+                type="button"
+                onClick={() => setPickingOther(false)}
+                className="rounded-md px-2 py-1 text-[11px] text-faint hover:text-ink"
+              >
+                Atrás
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => setPickingOther(true)} className={`${chip} border-dashed text-faint`}>
+                Otro…
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingTitle(null)}
+                className="rounded-md px-2 py-1 text-[11px] text-faint hover:text-ink"
+              >
+                Cancelar
+              </button>
+            </>
+          )}
         </div>
       </div>
     )
