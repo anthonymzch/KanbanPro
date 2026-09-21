@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Archive, ChevronRight, CircleCheckBig, ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react'
 import Modal from '../ui/Modal'
 import RichTextEditor from '../ui/RichTextEditor'
 import Badge from '../ui/Badge'
@@ -8,13 +8,14 @@ import { ReviewControls } from './TaskCard'
 import { useStore } from '../../hooks/useStore'
 import { useToast } from '../../hooks/useToast'
 import { useUI } from '../../hooks/useUI'
-import { PRIORITIES, PRIORITY_ORDER, projectStatus, tagColor } from '../../lib/constants'
+import { PRIORITIES, PRIORITY_ORDER, projectColor, projectStatus, tagColor } from '../../lib/constants'
+import { celebrate } from '../../lib/celebrate'
 import { MAX_TASK_IMAGES, imagesFromClipboard } from '../../lib/images'
 import { extractImageUrls } from '../../lib/richText'
 import { btnGhost, btnPrimary, inputCls, selectCls } from '../../lib/ui'
 
 export default function TaskModal() {
-  const { addTask, updateTask, deleteTask, addTaskImages, removeTaskImages, uploadInlineImage, deleteImagesByUrl, projects, tasks, columns } =
+  const { addTask, updateTask, deleteTask, addTaskImages, removeTaskImages, uploadInlineImage, deleteImagesByUrl, markTaskDone, prefs, projects, tasks, columns } =
     useStore()
   const toast = useToast()
   const { taskModal, closeTaskModal, filters, openProjects } = useUI()
@@ -37,6 +38,10 @@ export default function TaskModal() {
   const [subtasks, setSubtasks] = useState(task?.subtasks || [])
   const [subtaskInput, setSubtaskInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Detalles (proyecto, columna, prioridad, fecha, etiquetas, subtareas): a la vista con la
+  // "tarjeta de proyecto" y plegados con la "tarjeta sencilla" (Ajustes, junto a los filtros)
+  const [detailsOpen, setDetailsOpen] = useState(prefs.cardMode === 'project')
+  const canFinish = !isNew && task.column !== 'done' && task.column !== 'archived'
   // Capturas: las ya guardadas (URLs) y las nuevas pendientes de subir. Nada se
   // sube ni se borra hasta pulsar Guardar, así "Cancelar" descarta los cambios.
   const originalImages = useMemo(() => task?.images || [], [task])
@@ -85,6 +90,7 @@ export default function TaskModal() {
       return prev.filter((i) => i.id !== id)
     })
 
+  const selectedProject = projects.find((p) => p.id === projectId)
   const existingTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags || []))].sort(), [tasks])
   const tagSuggestions = useMemo(() => {
     const q = tagInput.trim().toLowerCase()
@@ -106,7 +112,7 @@ export default function TaskModal() {
   const toggleSubtask = (id) => setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, done: !s.done } : s)))
   const removeSubtask = (id) => setSubtasks((prev) => prev.filter((s) => s.id !== id))
 
-  const submit = async (e) => {
+  const submit = async (e, { done = false } = {}) => {
     e.preventDefault()
     const t = title.trim()
     if (!t || saving) return
@@ -131,7 +137,11 @@ export default function TaskModal() {
       ...[...sessionUploads.current].filter((u) => !kept.has(u)),
     ])
     const id = isNew ? addTask(data) : task.id
-    if (!isNew) updateTask(task.id, data)
+    if (!isNew) updateTask(task.id, data, { silent: done })
+    if (done) {
+      markTaskDone(id)
+      celebrate()
+    }
     const removed = originalImages.filter((url) => !savedImages.includes(url))
     if (newImages.length || removed.length) {
       setSaving(true)
@@ -256,6 +266,49 @@ export default function TaskModal() {
               <ReviewControls task={task} defaultNoteOpen />
             </div>
           )}
+          <div>
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((o) => !o)}
+              aria-expanded={detailsOpen}
+              className="flex w-full items-center gap-2 rounded-lg border border-edge bg-raised px-3 py-2 text-left transition-colors hover:border-cyan/40"
+            >
+              <ChevronRight size={13} className={`shrink-0 text-faint transition-transform ${detailsOpen ? 'rotate-90' : ''}`} />
+              <span className="shrink-0 font-mono text-[11px] text-faint">detalles</span>
+              {!detailsOpen && (
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-xs text-muted">
+                  {selectedProject && (
+                    <>
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${projectColor(selectedProject.color).dot}`} />
+                      <span className="truncate text-ink">{selectedProject.name}</span>
+                      <span className="text-faint">·</span>
+                    </>
+                  )}
+                  <span className="shrink-0">{columns.find((c) => c.id === column)?.label || column}</span>
+                  <span className="text-faint">·</span>
+                  <span className="shrink-0">{PRIORITIES[priority]?.label}</span>
+                  {dueDate && (
+                    <>
+                      <span className="text-faint">·</span>
+                      <span className="shrink-0">{dueDate}</span>
+                    </>
+                  )}
+                  {tags.length > 0 && (
+                    <>
+                      <span className="text-faint">·</span>
+                      <span className="shrink-0">{tags.length} {tags.length === 1 ? 'etiqueta' : 'etiquetas'}</span>
+                    </>
+                  )}
+                  {subtasks.length > 0 && (
+                    <>
+                      <span className="text-faint">·</span>
+                      <span className="shrink-0">{subtasks.filter((x) => x.done).length}/{subtasks.length} subtareas</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </button>
+            <div className={`mt-4 space-y-4 ${detailsOpen ? '' : 'hidden'}`}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block font-mono text-[11px] text-faint">proyecto</span>
@@ -386,6 +439,8 @@ export default function TaskModal() {
               </div>
             </div>
           </div>
+            </div>
+          </div>
           <div className="flex items-center gap-2 pt-2">
             {!isNew && (
               <>
@@ -411,6 +466,17 @@ export default function TaskModal() {
               </>
             )}
             <div className="ml-auto flex gap-2">
+              {canFinish && (
+                <button
+                  type="button"
+                  onClick={(e) => submit(e, { done: true })}
+                  disabled={!title.trim() || saving || editorUploading}
+                  title="Guarda los cambios y la marca como hecha"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <CircleCheckBig size={14} /> Hecho
+                </button>
+              )}
               <button type="button" className={btnGhost} onClick={closeTaskModal}>
                 Cancelar
               </button>

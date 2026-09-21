@@ -8,7 +8,12 @@ import ProjectMultiSelect from './ProjectMultiSelect'
 
 const EMPTY_VALUE = { projects: [], priority: '', tag: '' }
 
-function FilterVisibilityMenu({ hidden, onToggle }) {
+const CARD_MODES = [
+  { id: 'simple', label: 'Tarjeta sencilla', hint: 'Los detalles (proyecto, prioridad, etiquetas…) van plegados' },
+  { id: 'project', label: 'Tarjeta de proyecto', hint: 'Todos los detalles a la vista' },
+]
+
+function SettingsMenu({ hidden, onToggle, cardMode, onCardMode }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -26,13 +31,14 @@ function FilterVisibilityMenu({ hidden, onToggle }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Elegir qué filtros mostrar"
+        title="Ajustes: filtros visibles y tipo de tarjeta"
         className="rounded-lg p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
       >
         <Settings2 size={14} />
       </button>
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-20 min-w-[170px] rounded-lg border border-edge bg-surface p-1 shadow-card">
+        <div className="absolute left-0 top-[calc(100%+4px)] z-20 min-w-[240px] rounded-lg border border-edge bg-surface p-1 shadow-card">
+          <p className="px-2 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-wide text-faint">Filtros visibles</p>
           {FILTER_DEFS.map((f) => {
             const visible = !hidden.includes(f.id)
             return (
@@ -53,6 +59,27 @@ function FilterVisibilityMenu({ hidden, onToggle }) {
               </button>
             )
           })}
+          <p className="px-2 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wide text-faint">Tarjeta al editar</p>
+          {CARD_MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onCardMode(m.id)}
+              className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-raised"
+            >
+              <span
+                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                  cardMode === m.id ? 'border-cyan bg-cyan/20' : 'border-edge'
+                }`}
+              >
+                {cardMode === m.id && <span className="h-1.5 w-1.5 rounded-full bg-cyan" />}
+              </span>
+              <span>
+                <span className="block text-sm text-ink">{m.label}</span>
+                <span className="block text-[11px] leading-snug text-faint">{m.hint}</span>
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -60,7 +87,7 @@ function FilterVisibilityMenu({ hidden, onToggle }) {
 }
 
 export default function FilterBar() {
-  const { tasks, projects, prefs, setHiddenFilters } = useStore()
+  const { tasks, projects, prefs, setHiddenFilters, setCardMode } = useStore()
   const { filters, setFilters, searchRef } = useUI()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -148,7 +175,12 @@ export default function FilterBar() {
             <X size={12} /> Limpiar
           </button>
         )}
-        <FilterVisibilityMenu hidden={hiddenFilters} onToggle={toggleFilterVisibility} />
+        <SettingsMenu
+          hidden={hiddenFilters}
+          onToggle={toggleFilterVisibility}
+          cardMode={prefs.cardMode}
+          onCardMode={setCardMode}
+        />
       </div>
     </div>
   )

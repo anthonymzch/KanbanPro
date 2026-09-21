@@ -11,7 +11,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable'
-import confetti from 'canvas-confetti'
+import { celebrate } from '../lib/celebrate'
 import Column from '../components/board/Column'
 import { CardBody } from '../components/board/TaskCard'
 import { useStore } from '../hooks/useStore'
@@ -165,12 +165,7 @@ export default function BoardPage() {
     moveTask(active.id, col, order)
 
     if (col === 'done' && task.column !== 'done') {
-      confetti({
-        particleCount: 90,
-        spread: 75,
-        origin: { y: 0.65 },
-        colors: ['#2563EB', '#22D3EE', '#8B5CF6'],
-      })
+      celebrate()
       toast('Tarea completada 🎉')
     } else if (task.column !== col) {
       toast(`Movida a ${columns.find((c) => c.id === col)?.label || col}`, 'info')

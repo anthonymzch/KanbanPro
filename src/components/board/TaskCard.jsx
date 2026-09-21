@@ -1,10 +1,26 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, Check, CheckCircle2, Copy, ImageIcon, ListChecks, Loader2, Paperclip, X, XCircle } from 'lucide-react'
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleCheckBig,
+  Copy,
+  ImageIcon,
+  ListChecks,
+  Loader2,
+  Paperclip,
+  X,
+  XCircle,
+} from 'lucide-react'
 import Badge from '../ui/Badge'
+import { PriorityQuickMenu, TagQuickEdit } from './PillEditors'
 import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
+import { celebrate } from '../../lib/celebrate'
 import { dueMeta } from '../../lib/dates'
 
 function taskToText(task) {
@@ -164,9 +180,64 @@ export function ReviewControls({ task, defaultNoteOpen = false }) {
   )
 }
 
-export function CardBody({ task, overlay = false }) {
-  const { projects } = useStore()
+// Botón de acción de la tarjeta (no debe abrir la tarea ni iniciar un arrastre)
+function CardAction({ onClick, title, disabled, className = 'hover:text-cyan', children }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      title={title}
+      aria-label={title}
+      className={`rounded-md p-1 text-faint transition-colors hover:bg-raised disabled:pointer-events-none disabled:opacity-25 ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function CardBody({ task, overlay = false, onOpen }) {
+  const { projects, columns, prefs, sendTaskToColumn, markTaskDone } = useStore()
   const [copied, setCopied] = useState(false)
+  // Editor rápido abierto sobre una etiqueta o la prioridad: { type: 'tag'|'priority', tag?, anchor }
+  const [quickEdit, setQuickEdit] = useState(null)
+  const clickTimer = useRef(null)
+  useEffect(() => () => clearTimeout(clickTimer.current), [])
+
+  // Un clic en una etiqueta abre la tarea (como el resto de la tarjeta) pero con una pequeña
+  // espera, para poder distinguirlo del doble clic que abre el editor rápido.
+  const pillProps = (openEditor) =>
+    overlay
+      ? {}
+      : {
+          onClick: (e) => {
+            e.stopPropagation()
+            clearTimeout(clickTimer.current)
+            clickTimer.current = setTimeout(() => onOpen?.(), 250)
+          },
+          onDoubleClick: (e) => {
+            e.stopPropagation()
+            clearTimeout(clickTimer.current)
+            openEditor(e.currentTarget)
+          },
+        }
+
+  // Columnas vecinas (solo entre las visibles) para las flechas
+  const shownColumns = columns.filter((c) => !(prefs.hiddenColumns || []).includes(c.id))
+  const colIdx = shownColumns.findIndex((c) => c.id === task.column)
+  const prevColumn = colIdx > 0 ? shownColumns[colIdx - 1] : null
+  const nextColumn = colIdx >= 0 && colIdx < shownColumns.length - 1 ? shownColumns[colIdx + 1] : null
+  const canFinish = task.column !== 'done' && task.column !== 'archived'
+
+  const finish = () => {
+    markTaskDone(task.id)
+    celebrate()
+  }
+  const moveTo = (column) => (column.id === 'done' ? finish() : sendTaskToColumn(task.id, column.id))
   const due = dueMeta(task.dueDate)
   const prio = PRIORITIES[task.priority] || PRIORITIES.media
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
@@ -206,7 +277,12 @@ export function CardBody({ task, overlay = false }) {
       {(task.tags || []).length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
           {task.tags.map((tag) => (
-            <Badge key={tag} className={tagColor(tag)}>
+            <Badge
+              key={tag}
+              className={`${tagColor(tag)} ${overlay ? '' : 'cursor-pointer select-none'}`}
+              title={overlay ? undefined : 'Doble clic para cambiarle el nombre o el color'}
+              {...pillProps((anchor) => setQuickEdit({ type: 'tag', tag, anchor }))}
+            >
               {tag}
             </Badge>
           ))}
@@ -214,7 +290,13 @@ export function CardBody({ task, overlay = false }) {
       )}
       <p className="text-sm font-medium leading-snug text-ink">{task.title}</p>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        <Badge className={prio.badge}>{prio.label}</Badge>
+        <Badge
+          className={`${prio.badge} ${overlay ? '' : 'cursor-pointer select-none'}`}
+          title={overlay ? undefined : 'Doble clic para cambiar la prioridad'}
+          {...pillProps((anchor) => setQuickEdit({ type: 'priority', anchor }))}
+        >
+          {prio.label}
+        </Badge>
         {due && (
           <Badge
             className={
@@ -248,18 +330,39 @@ export function CardBody({ task, overlay = false }) {
           </Badge>
         )}
         {!overlay && (
-          <button
-            type="button"
-            onClick={handleCopy}
-            onPointerDown={(e) => e.stopPropagation()}
-            title="Copiar contenido de la tarjeta"
-            className="ml-auto rounded-md p-1 text-faint transition-colors hover:bg-raised hover:text-cyan"
-          >
-            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-          </button>
+          <span className="ml-auto flex items-center">
+            <CardAction
+              onClick={() => prevColumn && moveTo(prevColumn)}
+              disabled={!prevColumn}
+              title={prevColumn ? `Mover a ${prevColumn.label}` : 'No hay columna a la izquierda'}
+            >
+              <ChevronLeft size={14} />
+            </CardAction>
+            <CardAction
+              onClick={() => nextColumn && moveTo(nextColumn)}
+              disabled={!nextColumn}
+              title={nextColumn ? `Mover a ${nextColumn.label}` : 'No hay columna a la derecha'}
+            >
+              <ChevronRight size={14} />
+            </CardAction>
+            {canFinish && (
+              <CardAction onClick={finish} title="Marcar como hecha" className="hover:text-emerald-400">
+                <CircleCheckBig size={13} />
+              </CardAction>
+            )}
+            <CardAction onClick={handleCopy} title="Copiar contenido de la tarjeta">
+              {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+            </CardAction>
+          </span>
         )}
       </div>
       {!overlay && task.column === 'review' && <ReviewControls task={task} />}
+      {quickEdit?.type === 'tag' && (
+        <TagQuickEdit task={task} tag={quickEdit.tag} anchor={quickEdit.anchor} onClose={() => setQuickEdit(null)} />
+      )}
+      {quickEdit?.type === 'priority' && (
+        <PriorityQuickMenu task={task} anchor={quickEdit.anchor} onClose={() => setQuickEdit(null)} />
+      )}
     </div>
   )
 }
@@ -278,7 +381,7 @@ export default function TaskCard({ task, onClick }) {
       {...attributes}
       {...listeners}
     >
-      <CardBody task={task} />
+      <CardBody task={task} onOpen={() => onClick(task)} />
     </div>
   )
 }

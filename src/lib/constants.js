@@ -30,10 +30,36 @@ export const TAG_PALETTE = [
   'bg-lime-500/15 text-lime-400 border-lime-500/30',
 ]
 
-export function tagColor(name) {
+// Puntos de color equivalentes a TAG_PALETTE (mismo orden) para los selectores de color
+export const TAG_DOTS = [
+  'bg-sky-400',
+  'bg-violet-400',
+  'bg-emerald-400',
+  'bg-rose-400',
+  'bg-amber-400',
+  'bg-cyan-400',
+  'bg-fuchsia-400',
+  'bg-lime-400',
+]
+
+// Colores que el usuario eligió para etiquetas concretas ({ nombre: índice de TAG_PALETTE }).
+// Lo rellena el store desde las preferencias; el resto de etiquetas sigue derivando su
+// color del nombre.
+let tagColorOverrides = {}
+export function setTagColorOverrides(map) {
+  tagColorOverrides = map || {}
+}
+
+export function tagColorIndex(name) {
+  const chosen = tagColorOverrides[name]
+  if (Number.isInteger(chosen) && chosen >= 0 && chosen < TAG_PALETTE.length) return chosen
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
-  return TAG_PALETTE[h % TAG_PALETTE.length]
+  return h % TAG_PALETTE.length
+}
+
+export function tagColor(name) {
+  return TAG_PALETTE[tagColorIndex(name)]
 }
 
 // Colores elegibles para proyectos (clases completas para el JIT de Tailwind)

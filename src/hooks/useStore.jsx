@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore'
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { db, storage } from '../lib/firebase'
-import { COLUMNS } from '../lib/constants'
+import { COLUMNS, setTagColorOverrides } from '../lib/constants'
 import { prepareImage } from '../lib/images'
 import { extractImageUrls } from '../lib/richText'
 import { useAuth } from './useAuth'
@@ -36,6 +36,8 @@ export function StoreProvider({ children }) {
     hiddenColumns: [],
     hiddenFilters: [],
     columnOrder: [],
+    tagColors: {},
+    cardMode: 'simple',
   })
   const [tasks, setTasks] = useState([])
   const [ideas, setIdeas] = useState([])
@@ -51,14 +53,19 @@ export function StoreProvider({ children }) {
     const unsubs = [
       onSnapshot(doc(db, 'users', uid), (snap) => {
         const d = snap.data()
-        if (d)
+        if (d) {
+          // Antes del setPrefs para que el render ya vea los colores nuevos
+          setTagColorOverrides(d.tagColors)
           setPrefs({
             theme: d.theme || 'dark',
             exportPrompt: d.exportPrompt ?? null,
             hiddenColumns: d.hiddenColumns ?? [],
             hiddenFilters: d.hiddenFilters ?? [],
             columnOrder: d.columnOrder ?? [],
+            tagColors: d.tagColors ?? {},
+            cardMode: d.cardMode || 'simple',
           })
+        }
       }),
       onSnapshot(query(collection(db, 'users', uid, 'tasks'), orderBy('order')), (snap) => {
         setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
@@ -148,6 +155,18 @@ export function StoreProvider({ children }) {
         setPrefs((p) => ({ ...p, hiddenColumns }))
         updateDoc(userRef, { hiddenColumns }).catch(fail)
       },
+      // Tipo de tarjeta al editar: 'simple' (detalles plegados) | 'project' (detalles a la vista)
+      setCardMode: (cardMode) => {
+        setPrefs((p) => ({ ...p, cardMode }))
+        updateDoc(userRef, { cardMode }).catch(fail)
+      },
+      // Color elegido para una etiqueta (índice de TAG_PALETTE)
+      setTagColor: (name, index) => {
+        const tagColors = { ...prefs.tagColors, [name]: index }
+        setTagColorOverrides(tagColors)
+        setPrefs((p) => ({ ...p, tagColors }))
+        updateDoc(userRef, { tagColors }).catch(fail)
+      },
       setHiddenFilters: (hiddenFilters) => {
         setPrefs((p) => ({ ...p, hiddenFilters }))
         updateDoc(userRef, { hiddenFilters }).catch(fail)
@@ -229,6 +248,14 @@ export function StoreProvider({ children }) {
       },
       moveTask: (id, column, order) => {
         updateDoc(doc(tasksCol, id), { column, order, updatedAt: serverTimestamp() }).catch(fail)
+      },
+      // Manda una tarea al final de otra columna (sin aviso: la tarjeta se ve moverse)
+      sendTaskToColumn: (id, column) => {
+        updateDoc(doc(tasksCol, id), { column, order: nextOrder(column), updatedAt: serverTimestamp() }).catch(fail)
+      },
+      markTaskDone: (id) => {
+        updateDoc(doc(tasksCol, id), { column: 'done', order: nextOrder('done'), updatedAt: serverTimestamp() }).catch(fail)
+        toast('Tarea completada 🎉')
       },
       // Manda de una vez las tareas indicadas a Revisión, cada una con su propia nota
       // (items: [{ id, note }])
