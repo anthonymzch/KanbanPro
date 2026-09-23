@@ -244,8 +244,7 @@ export function CardBody({ task, overlay = false, onOpen }) {
   const subtasks = task.subtasks || []
   const subtasksDone = subtasks.filter((s) => s.done).length
 
-  const handleCopy = async (e) => {
-    e.stopPropagation()
+  const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(taskToText(task))
       setCopied(true)
