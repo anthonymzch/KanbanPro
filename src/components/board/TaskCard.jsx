@@ -22,6 +22,7 @@ import { useStore } from '../../hooks/useStore'
 import { PRIORITIES, projectColor, tagColor } from '../../lib/constants'
 import { celebrate } from '../../lib/celebrate'
 import { dueMeta } from '../../lib/dates'
+import { writeClipboard } from '../../lib/clipboard'
 
 function taskToText(task) {
   const parts = [task.title]
@@ -246,7 +247,7 @@ export function CardBody({ task, overlay = false, onOpen }) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(taskToText(task))
+      await writeClipboard(taskToText(task))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {

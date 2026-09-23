@@ -1,4 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { Lightbulb, SquareKanban } from 'lucide-react'
 import { useUI } from '../../hooks/useUI'
 import Sidebar from './Sidebar'
@@ -29,7 +32,57 @@ function MobileNav() {
 }
 
 export default function AppShell() {
-  const { taskModal, ideaModal, paletteOpen, projectsOpen, columnsOpen } = useUI()
+  const {
+    taskModal,
+    ideaModal,
+    paletteOpen,
+    projectsOpen,
+    columnsOpen,
+    closeTaskModal,
+    closeIdeaModal,
+    setPaletteOpen,
+    closeProjects,
+    closeColumns,
+  } = useUI()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined
+
+    let listener
+    let cancelled = false
+    CapacitorApp.addListener('backButton', () => {
+      if (paletteOpen) setPaletteOpen(false)
+      else if (taskModal) closeTaskModal()
+      else if (ideaModal) closeIdeaModal()
+      else if (projectsOpen) closeProjects()
+      else if (columnsOpen) closeColumns()
+      else if (location.pathname !== '/') navigate('/')
+      else CapacitorApp.exitApp()
+    }).then((handle) => {
+      if (cancelled) handle.remove()
+      else listener = handle
+    })
+
+    return () => {
+      cancelled = true
+      listener?.remove()
+    }
+  }, [
+    columnsOpen,
+    ideaModal,
+    location.pathname,
+    navigate,
+    paletteOpen,
+    projectsOpen,
+    taskModal,
+    closeColumns,
+    closeIdeaModal,
+    closeProjects,
+    closeTaskModal,
+    setPaletteOpen,
+  ])
 
   return (
     <div className="flex h-screen overflow-hidden bg-base">

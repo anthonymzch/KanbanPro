@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="64" x2="944" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111724"/>
+      <stop offset="1" stop-color="#080B12"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="220" y1="210" x2="810" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="0.55" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect x="190" y="180" width="644" height="664" rx="92" fill="none" stroke="#273146" stroke-width="24"/>
+  <path d="M298 322h118v390H298zM453 322h118v258H453zM608 322h118v326H608z" fill="#22D3EE" opacity=".24" filter="url(#glow)"/>
+  <rect x="286" y="310" width="128" height="414" rx="34" fill="#2563EB"/>
+  <rect x="448" y="310" width="128" height="284" rx="34" fill="#22D3EE"/>
+  <rect x="610" y="310" width="128" height="350" rx="34" fill="#8B5CF6"/>
+  <rect x="286" y="310" width="452" height="414" rx="34" fill="url(#accent)" opacity=".16"/>
+</svg>

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "625271239782",
+    "project_id": "kanbanpro-anthony",
+    "storage_bucket": "kanbanpro-anthony.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:625271239782:android:9c7f323989ab62239ea9a7",
+        "android_client_info": {
+          "package_name": "com.anthonycode.kanbanpro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "625271239782-6tn61fq1q0nbgvn5mpqq0dmr705oh95f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anthonycode.kanbanpro",
+            "certificate_hash": "9497877c6ca88ac0c05356539fa128f118c1b623"
+          }
+        },
+        {
+          "client_id": "625271239782-iqijh7i55os68a0na2euhdi60tufstvl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1IeP767RxJ6R8AepflssH1oijE0avoXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "625271239782-iqijh7i55os68a0na2euhdi60tufstvl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

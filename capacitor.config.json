@@ -1,0 +1,15 @@
+{
+  "appId": "com.anthonycode.kanbanpro",
+  "appName": "KanbanPro",
+  "webDir": "dist",
+  "backgroundColor": "#0A0E16",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": ["google.com"]
+    }
+  }
+}

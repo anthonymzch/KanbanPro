@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   updateProfile,
 } from 'firebase/auth'
+import { Capacitor } from '@capacitor/core'
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, db, googleProvider } from '../lib/firebase'
 
@@ -41,10 +45,24 @@ export function AuthProvider({ children }) {
     [],
   )
 
+  const loginGoogle = async () => {
+    if (!Capacitor.isNativePlatform()) return signInWithPopup(auth, googleProvider)
+
+    const result = await FirebaseAuthentication.signInWithGoogle()
+    const { idToken, accessToken } = result.credential || {}
+    if (!idToken) throw new Error('No se recibió la credencial de Google')
+    return signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken))
+  }
+
+  const logout = async () => {
+    if (Capacitor.isNativePlatform()) await FirebaseAuthentication.signOut().catch(() => {})
+    return signOut(auth)
+  }
+
   const value = {
     user,
     loading,
-    loginGoogle: () => signInWithPopup(auth, googleProvider),
+    loginGoogle,
     loginEmail: (email, password) => signInWithEmailAndPassword(auth, email, password),
     registerEmail: async (name, email, password) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
@@ -53,7 +71,7 @@ export function AuthProvider({ children }) {
       return cred
     },
     resetPassword: (email) => sendPasswordResetEmail(auth, email),
-    logout: () => signOut(auth),
+    logout,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

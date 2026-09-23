@@ -9,6 +9,7 @@
 [![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev)
 [![Firebase](https://img.shields.io/badge/Firebase-DD2C00?style=flat-square&logo=firebase&logoColor=white)](https://firebase.google.com)
+[![Android](https://img.shields.io/badge/Android-Capacitor-3DDC84?style=flat-square&logo=android&logoColor=white)](https://capacitorjs.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![dnd kit](https://img.shields.io/badge/dnd--kit-8B5CF6?style=flat-square)](https://dndkit.com)
 
@@ -43,6 +44,7 @@ También puedes crear tu propia cuenta con Google o email — tus datos son solo
 | UI | React 18 + Vite, Tailwind CSS 3, lucide-react |
 | Drag & drop | @dnd-kit/core + @dnd-kit/sortable |
 | Backend | Firebase: Authentication (Google + email), Cloud Firestore, Hosting |
+| Android | Capacitor 8, Firebase Authentication nativo, API 24+ |
 | Extras | canvas-confetti, react-router 7 |
 
 ## Decisiones técnicas
@@ -74,6 +76,17 @@ npm install
 npm run dev        # http://localhost:5174
 npm run build      # producción en dist/
 ```
+
+## Android
+
+El proyecto Android está en `android/` y comparte el mismo frontend y proyecto Firebase que la web. Requiere Android SDK; admite Android 7 (API 24) o posterior.
+
+```bash
+npm run android:sync   # compila la web y sincroniza el proyecto nativo
+npm run android:apk    # genera android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+El APK de desarrollo queda firmado con la clave debug local. Para publicar en Google Play se debe crear una clave de producción y generar un AAB de release.
 
 > La config de Firebase incluida apunta al proyecto de producción (las API keys de Firebase son públicas por diseño; la seguridad la imponen las reglas de Firestore). Para tu propia instancia: crea un proyecto en Firebase, habilita Auth + Firestore y reemplaza la config en `src/lib/firebase.js`.
 

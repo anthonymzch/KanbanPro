@@ -5,6 +5,7 @@ Gestión de trabajo tipo kanban + lluvia de ideas. Herramienta personal con arqu
 ## Stack
 
 - React 18 + Vite + Tailwind CSS 3 (tema oscuro por defecto, `darkMode: 'class'`)
+- Android con Capacitor 8 (paquete `com.anthonycode.kanbanpro`, API 24+)
 - Firebase: Auth (Google + email/contraseña), Firestore, Hosting — proyecto `kanbanpro-anthony`
 - `@dnd-kit/core` + `@dnd-kit/sortable` para drag & drop
 - `lucide-react` (iconos), `canvas-confetti`
@@ -16,11 +17,14 @@ Gestión de trabajo tipo kanban + lluvia de ideas. Herramienta personal con arqu
 npm run dev       # dev server en http://localhost:5174 (strictPort)
 npm run build     # build de producción en dist/
 npm run deploy    # build + firebase deploy (hosting + reglas firestore)
+npm run android:sync  # build web + sincronización de android/
+npm run android:apk   # APK debug instalable
 ```
 
 ## Arquitectura
 
 - `src/lib/firebase.js` — init de Firebase (auth, db, provider de Google)
+- `capacitor.config.json` y `android/` — configuración y proyecto nativo Android
 - `src/lib/constants.js` — columnas, prioridades, categorías/estados de idea, paleta de etiquetas
 - `src/hooks/useAuth.jsx` — sesión; crea `users/{uid}` en el primer login
 - `src/hooks/useStore.jsx` — suscripciones `onSnapshot` a prefs/tasks/ideas + todas las operaciones de escritura. La UI optimista sale gratis por la compensación de latencia de Firestore. Aplica el tema al `<html>`.

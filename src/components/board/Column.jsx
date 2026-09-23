@@ -22,6 +22,7 @@ import { buildColumnExport, buildCorrectionsExport, needsCorrection } from '../.
 import { DEFAULT_EXPORT_PROMPT, EXPORT_PROMPT_PRESETS, projectColor } from '../../lib/constants'
 import { isWithinDays } from '../../lib/dates'
 import { splitReviewNotes } from '../../lib/reviewNotes'
+import { writeClipboard } from '../../lib/clipboard'
 
 const DOTS = {
   backlog: 'bg-slate-400',
@@ -175,7 +176,7 @@ export default function Column({ column, tasks, onCardClick }) {
 
   const handleCopyColumn = async () => {
     try {
-      await navigator.clipboard.writeText(buildColumnExport(column, visibleTasks, projects, exportPrompt))
+      await writeClipboard(buildColumnExport(column, visibleTasks, projects, exportPrompt))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -190,7 +191,7 @@ export default function Column({ column, tasks, onCardClick }) {
 
   const handleCopyCorrections = async () => {
     try {
-      await navigator.clipboard.writeText(buildCorrectionsExport(tasks, projects))
+      await writeClipboard(buildCorrectionsExport(tasks, projects))
       setCorrectionsCopied(true)
       setTimeout(() => setCorrectionsCopied(false), 1500)
     } catch {
